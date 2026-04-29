@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#0b0b10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="TrainFlow">
+  <title>TrainFlow</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <!-- Supabase JS SDK für Cloud-Sync -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ===== CSS-VARIABLEN & RESET ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg:        #0b0b10;
+      --s1:        #111118;
+      --s2:        #18181f;
+      --s3:        #222230;
+      --s4:        #2e2e3e;
+      --text:      #f0f0f8;
+      --text2:     #9090b0;
+      --text3:     #55556a;
+      --teal:      #2dd4bf;
+      --teal-d:    #0d9488;
+      --blue:      #60a5fa;
+      --blue-d:    #2563eb;
+      --amber:     #fbbf24;
+      --amber-d:   #d97706;
+      --coral:     #f87171;
+      --coral-d:   #dc2626;
+      --green:     #34d399;
+      --r:         14px;
+      --r-sm:      8px;
+      --nav-h:     68px;
+      --safe-b:    env(safe-area-inset-bottom, 0px);
+    }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    /* ===== APP CONTAINER ===== */
+    #app { position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
+   
+    /* ===== SCREENS ===== */
+    .screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .screen.active { display: flex; flex-direction: column; }
+    .screen-content { flex: 1; padding: 0 0 calc(var(--nav-h) + var(--safe-b) + 16px); }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+    h2 { font-size: 1.25rem; font-weight: 600; }
+    h3 { font-size: 1rem; font-weight: 600; }
+
+    /* ===== HEADER ===== */
+    .page-header { padding: 52px 20px 16px; background: linear-gradient(to bottom, var(--bg), transparent); }
+    .page-header h1 { font-size: 2.8rem; color: var(--text); }
+    .page-header p { font-size: 0.85rem; color: var(--text2); margin-top: 2px; }
+
+    /* ===== BOTTOM NAV ===== */
+    #bottom-nav {
+      height: calc(var(--nav-h) + var(--safe-b));
+      display: flex;
+      background: var(--s1);
+      border-top: 1px solid var(--s3);
+      padding-bottom: var(--safe-b);
+      position: relative;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; border: none; background: none; color: var(--text3); cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 500;
+      padding: 8px 4px; transition: color .2s; min-height: 48px;
+    }
+    .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+    .nav-btn.active { color: var(--teal); }
+    .nav-btn.active svg { transform: scale(1.1); }
+
+    /* ===== CARDS ===== */
+    .card { background: var(--s2); border-radius: var(--r); padding: 18px; margin: 0 16px 12px; border: 1px solid var(--s3); }
+    .card-sm { padding: 14px; }
+
+    /* ===== BUTTONS ===== */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all .15s; min-height: 48px; padding: 0 20px; font-size: 0.95rem; }
+    .btn-primary { background: var(--teal); color: #0b0b10; }
+    .btn-primary:active { filter: brightness(.85); transform: scale(.97); }
+    .btn-ghost { background: var(--s3); color: var(--text); }
+    .btn-ghost:active { filter: brightness(.8); }
+    .btn-danger { background: rgba(248,113,113,.15); color: var(--coral); }
+    .btn-danger:active { filter: brightness(.8); }
+    .btn-full { width: 100%; border-radius: var(--r); }
+    .btn-icon { background: none; border: none; cursor: pointer; padding: 10px; color: var(--text2); display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+    .btn-icon:active { color: var(--text); }
+    .btn-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ===== ACCENT COLORS ===== */
+    .accent-teal  { --accent: var(--teal);  --accent-d: var(--teal-d);  }
+    .accent-blue  { --accent: var(--blue);  --accent-d: var(--blue-d);  }
+    .accent-amber { --accent: var(--amber); --accent-d: var(--amber-d); }
+    .accent-coral { --accent: var(--coral); --accent-d: var(--coral-d); }
+
+    /* ===== BADGE / PILL ===== */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; letter-spacing: .03em; }
+    .badge-teal  { background: rgba(45,212,191,.15); color: var(--teal); }
+    .badge-blue  { background: rgba(96,165,250,.15); color: var(--blue); }
+    .badge-amber { background: rgba(251,191,36,.15);  color: var(--amber); }
+    .badge-coral { background: rgba(248,113,113,.15); color: var(--coral); }
+
+    /* ===== HOME SCREEN ===== */
+    .home-hero { padding: 52px 20px 20px; }
+    .home-greeting { font-size: 0.85rem; color: var(--text2); margin-bottom: 4px; }
+    .home-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: .04em; line-height: 1; }
+    .home-subtitle { font-size: 0.85rem; color: var(--text2); margin-top: 6px; }
+    .section-label { font-size: 0.7rem; font-weight: 700; letter-spacing: .12em; color: var(--text3); text-transform: uppercase; padding: 0 20px 10px; }
+    .quick-stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+    .quick-stat { background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r); padding: 16px; text-align: center; }
+    .quick-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--teal); letter-spacing: .04em; }
+    .quick-stat-label { font-size: 0.72rem; color: var(--text2); margin-top: 2px; }
+    .routine-card {
+      margin: 0 16px 12px; border-radius: var(--r); padding: 20px;
+      background: var(--s2); border: 1px solid var(--s3);
+      position: relative; overflow: hidden; cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .routine-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+    }
+    .routine-card:active { transform: scale(.98); }
+    .routine-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .routine-card-meta { flex: 1; min-width: 0; }
+    .routine-card-name { font-size: 1.05rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .routine-card-desc { font-size: 0.8rem; color: var(--text2); margin-top: 4px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .routine-card-stats { display: flex; gap: 12px; margin-top: 12px; }
+    .routine-card-stat { font-size: 0.77rem; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+    .routine-card-stat svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+    .routine-card .btn-start { margin-top: 14px; width: 100%; background: var(--accent); color: #0b0b10; border-radius: var(--r-sm); height: 44px; font-weight: 700; font-size: 0.9rem; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: filter .15s; }
+    .routine-card .btn-start:active { filter: brightness(.85); }
+
+    /* ===== ROUTINE LIST ===== */
+    .fab {
+      position: fixed; bottom: calc(var(--nav-h) + var(--safe-b) + 16px); right: 20px;
+      width: 56px; height: 56px; border-radius: 50%; background: var(--teal);
+      border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      z-index: 50; box-shadow: 0 4px 20px rgba(45,212,191,.4);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .fab:active { transform: scale(.9); }
+    .fab svg { width: 24px; height: 24px; stroke: #0b0b10; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+    /* ===== ROUTINE DETAIL SCREEN ===== */
+    .detail-header {
+      padding: 52px 16px 16px;
+      position: relative;
+    }
+    .detail-header-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .detail-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: .03em; }
+    .detail-header p { font-size: 0.85rem; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+    .detail-start-bar { display: flex; gap: 10px; margin: 16px 16px 0; }
+    .detail-start-bar .btn { flex: 1; }
+    .exercises-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .exercise-item {
+      background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r-sm);
+      display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 14px;
+      transition: opacity .2s, transform .15s;
+      cursor: default; position: relative;
+    }
+    .exercise-item.dragging { opacity: .5; transform: scale(.98); }
+    .exercise-item.drag-over { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .drag-handle { cursor: grab; padding: 4px 6px; color: var(--text3); touch-action: none; flex-shrink: 0; display: flex; align-items: center; }
+    .drag-handle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .drag-handle:active { cursor: grabbing; }
+    .ex-info { flex: 1; min-width: 0; }
+    .ex-name { font-size: 0.92rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ex-meta { font-size: 0.75rem; color: var(--text2); margin-top: 3px; display: flex; gap: 10px; }
+    .ex-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .add-exercise-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: 1.5px dashed var(--s4); border-radius: var(--r-sm); color: var(--text2); font-size: 0.88rem; font-weight: 500; cursor: pointer; background: none; font-family: 'DM Sans', sans-serif; transition: all .15s; width: 100%; }
+    .add-exercise-btn:hover, .add-exercise-btn:active { border-color: var(--teal); color: var(--teal); }
+
+    /* ===== WORKOUT PLAYER ===== */
+    .player-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: none; flex-direction: column;
+      background: var(--bg);
+      animation: fadeIn .3s ease;
+    }
+    .player-overlay.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+   
+    .player-top-bar {
+      display: flex; align-items: center; padding: 48px 12px 10px;
+      gap: 8px; flex-shrink: 0;
+    }
+    .player-routine-label { font-size: 0.78rem; color: var(--text2); flex: 1; text-align: center; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+    .player-progress-label { font-size: 0.78rem; font-weight: 700; color: var(--text2); min-width: 40px; text-align: right; }
+   
+    .player-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px 20px; gap: 8px; }
+    .player-set-badge { background: var(--s3); border-radius: 99px; padding: 4px 14px; font-size: 0.78rem; font-weight: 700; color: var(--text2); letter-spacing: .04em; text-transform: uppercase; }
+    .player-ex-name { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; letter-spacing: .04em; text-align: center; line-height: 1.05; max-width: 320px; }
+    .player-ex-desc { font-size: 0.85rem; color: var(--text2); text-align: center; max-width: 300px; line-height: 1.5; }
+   
+    /* Circular Timer */
+    .timer-wrap { position: relative; width: 230px; height: 230px; flex-shrink: 0; }
+    .timer-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .timer-track { stroke: var(--s3); stroke-width: 10; fill: none; }
+    .timer-arc { stroke: var(--accent, var(--teal)); stroke-width: 10; fill: none; stroke-linecap: round; transition: stroke-dashoffset .9s linear; }
+    .timer-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+    .timer-num { font-family: 'Bebas Neue', sans-serif; font-size: 5rem; line-height: 1; color: var(--text); letter-spacing: .02em; }
+    .timer-unit { font-size: 0.75rem; color: var(--text2); letter-spacing: .1em; text-transform: uppercase; font-weight: 500; margin-top: -4px; }
+   
+    /* Reps mode */
+    .reps-display { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 230px; height: 230px; justify-content: center; background: var(--s2); border-radius: 50%; border: 10px solid var(--s3); }
+    .reps-num { font-family: 'Bebas Neue', sans-serif; font-size: 5rem; color: var(--accent, var(--teal)); line-height: 1; }
+    .reps-label { font-size: 0.78rem; color: var(--text2); font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+   
+    .player-controls { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+    .btn-play-pause { width: 64px; height: 64px; border-radius: 50%; background: var(--accent, var(--teal)); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: filter .15s, transform .1s; }
+    .btn-play-pause:active { filter: brightness(.85); transform: scale(.93); }
+    .btn-play-pause svg { width: 28px; height: 28px; fill: #0b0b10; stroke: none; }
+    .btn-done-reps { height: 64px; padding: 0 36px; border-radius: 32px; background: var(--accent, var(--teal)); border: none; color: #0b0b10; font-family: 'DM Sans', sans-serif; font-size: 1.05rem; font-weight: 700; cursor: pointer; letter-spacing: .04em; transition: filter .15s, transform .1s; }
+    .btn-done-reps:active { filter: brightness(.85); transform: scale(.97); }
+
+    /* Progress bar at bottom of player */
+    .player-progress-bar { height: 3px; background: var(--s3); flex-shrink: 0; }
+    .player-progress-fill { height: 100%; background: var(--accent, var(--teal)); transition: width .5s ease; }
+
+    /* ===== PLAYER AUX CONTROLS (Skip / +Zeit / Reps-Adj.) ===== */
+    .player-aux { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+    .btn-skip-ex {
+      height: 44px; padding: 0 18px; border-radius: 22px;
+      background: var(--s3); border: none; color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background .15s, color .15s;
+    }
+    .btn-skip-ex:active { background: var(--s4); color: var(--text); }
+    .btn-skip-ex svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .btn-add-time-ex {
+      height: 44px; padding: 0 18px; border-radius: 22px;
+      background: rgba(45,212,191,.12); border: none; color: var(--teal);
+      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-add-time-ex:active { background: rgba(45,212,191,.22); }
+
+    /* Reps-Anpassung im Player */
+    .reps-adj-row { display: flex; gap: 14px; align-items: center; }
+    .btn-reps-adj {
+      width: 48px; height: 48px; border-radius: 50%; background: var(--s3);
+      border: none; color: var(--text); font-size: 1.6rem; font-weight: 300;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background .15s;
+    }
+    .btn-reps-adj:active { background: var(--s4); }
+    .reps-adj-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--text); min-width: 50px; text-align: center; }
+
+    /* ===== PROFIL-AUSWAHL SCREEN ===== */
+    .profile-screen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 600;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px; animation: fadeIn .3s ease;
+    }
+    .profile-screen h1 { font-size: 3rem; color: var(--teal); margin-bottom: 6px; }
+    .profile-screen p { font-size: 0.9rem; color: var(--text2); margin-bottom: 32px; text-align: center; }
+    .profile-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .profile-item {
+      display: flex; align-items: center; gap: 14px; padding: 16px;
+      background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r);
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .profile-item:active { background: var(--s3); border-color: var(--teal); }
+    .profile-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; color: #0b0b10; flex-shrink: 0;
+    }
+    .profile-info { flex: 1; min-width: 0; }
+    .profile-name { font-size: 1rem; font-weight: 600; }
+    .profile-meta { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
+    .profile-check { color: var(--teal); font-size: 1.2rem; }
+    .profile-add-btn {
+      width: 100%; max-width: 360px; height: 50px; border-radius: var(--r);
+      background: var(--s3); border: 1.5px dashed var(--s4); color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: border-color .15s, color .15s;
+    }
+    .profile-add-btn:active { border-color: var(--teal); color: var(--teal); }
+
+    /* ===== REST SCREEN ===== */
+    .rest-overlay { background: var(--s1); }
+    .rest-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px; gap: 10px; }
+    .rest-tag { font-size: 0.7rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--green); background: rgba(52,211,153,.12); padding: 4px 14px; border-radius: 99px; }
+    .rest-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--text2); letter-spacing: .05em; }
+    .rest-timer-num { font-family: 'Bebas Neue', sans-serif; font-size: 7rem; color: var(--text); letter-spacing: .02em; line-height: 1; }
+    .rest-next-label { font-size: 0.78rem; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+    .rest-next-name { font-size: 1rem; font-weight: 600; color: var(--text2); text-align: center; max-width: 260px; }
+    .rest-controls { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-rest-skip { height: 50px; padding: 0 24px; border-radius: 25px; background: var(--s3); border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .btn-rest-add  { height: 50px; padding: 0 24px; border-radius: 25px; background: rgba(52,211,153,.15); border: none; color: var(--green); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .rest-progress { width: 200px; height: 4px; background: var(--s3); border-radius: 2px; overflow: hidden; }
+    .rest-progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .9s linear; }
+
+    /* ===== WORKOUT COMPLETE ===== */
+    .complete-overlay { background: var(--bg); }
+    .complete-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 12px; text-align: center; }
+    .complete-icon { font-size: 4rem; }
+    .complete-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; letter-spacing: .04em; }
+    .complete-routine { font-size: 0.85rem; color: var(--text2); }
+    .complete-stats-row { display: flex; gap: 0; margin: 12px 0; width: 100%; max-width: 320px; }
+    .complete-stat { flex: 1; padding: 16px 8px; background: var(--s2); border: 1px solid var(--s3); }
+    .complete-stat:first-child { border-radius: var(--r) 0 0 var(--r); }
+    .complete-stat:last-child  { border-radius: 0 var(--r) var(--r) 0; }
+    .complete-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--teal); }
+    .complete-stat-label { font-size: 0.7rem; color: var(--text2); margin-top: 2px; }
+    .complete-message { font-size: 0.9rem; color: var(--text2); line-height: 1.6; max-width: 280px; }
+    .complete-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; margin-top: 8px; }
+
+    /* ===== STATS SCREEN ===== */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 12px; }
+    .stat-box { background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r); padding: 16px; }
+    .stat-box-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: .03em; }
+    .stat-box-label { font-size: 0.72rem; color: var(--text2); margin-top: 1px; }
+    .streak-box { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+    .streak-flame { font-size: 2.5rem; }
+    .streak-info { flex: 1; }
+    .streak-num { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--amber); line-height: 1; }
+    .streak-label { font-size: 0.8rem; color: var(--text2); }
+    .heatmap-container { padding: 0 16px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .heatmap-inner { min-width: 650px; }
+    .chart-container { padding: 0 16px 16px; }
+    .chart-box { background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r); padding: 16px; }
+    .chart-title { font-size: 0.8rem; font-weight: 600; color: var(--text2); margin-bottom: 14px; letter-spacing: .04em; text-transform: uppercase; }
+    canvas.bar-chart { width: 100%; height: 140px; display: block; }
+    .log-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+    .log-item { background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r-sm); padding: 14px; display: flex; align-items: center; gap: 12px; }
+    .log-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+    .log-info { flex: 1; min-width: 0; }
+    .log-name { font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .log-meta { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
+    .log-duration { font-size: 0.85rem; font-weight: 600; color: var(--text2); }
+    .empty-state { padding: 48px 24px; text-align: center; color: var(--text3); }
+    .empty-state svg { width: 48px; height: 48px; stroke: currentColor; fill: none; stroke-width: 1.5; margin-bottom: 12px; opacity: .5; }
+    .empty-state h3 { font-size: 1rem; color: var(--text2); margin-bottom: 6px; }
+    .empty-state p { font-size: 0.85rem; line-height: 1.5; }
+
+    /* ===== SETTINGS SCREEN ===== */
+    .settings-section { padding: 8px 16px; }
+    .settings-section + .settings-section { padding-top: 0; }
+    .settings-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px; background: var(--s2); border: 1px solid var(--s3);
+      cursor: pointer; transition: background .15s;
+    }
+    .settings-row:first-child { border-radius: var(--r) var(--r) 0 0; }
+    .settings-row:last-child  { border-radius: 0 0 var(--r) var(--r); border-top: none; }
+    .settings-row:only-child  { border-radius: var(--r); }
+    .settings-row + .settings-row { border-top: none; }
+    .settings-row:active { background: var(--s3); }
+    .settings-icon { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--s3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .settings-icon svg { width: 18px; height: 18px; stroke: var(--text2); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .settings-label { flex: 1; font-size: 0.92rem; font-weight: 500; }
+    .settings-arrow { color: var(--text3); }
+    .settings-arrow svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .version-note { text-align: center; font-size: 0.72rem; color: var(--text3); padding: 24px; }
+
+    /* ===== CLOUD SYNC STYLES ===== */
+    .cloud-status-row { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--s2); border: 1px solid var(--s3); border-radius: var(--r); margin: 0 16px; }
+    .cloud-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .cloud-dot.connected   { background: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,.2); }
+    .cloud-dot.offline     { background: var(--text3); }
+    .cloud-dot.error       { background: var(--coral); }
+    .cloud-dot.syncing     { background: var(--amber); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    .cloud-info { flex: 1; min-width: 0; }
+    .cloud-label { font-size: .88rem; font-weight: 600; }
+    .cloud-sub   { font-size: .72rem; color: var(--text2); margin-top: 2px; }
+    .btn-sync { height: 36px; padding: 0 14px; border-radius: 18px; background: rgba(45,212,191,.12); border: none; color: var(--teal); font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .btn-sync:active { background: rgba(45,212,191,.22); }
+    .btn-sync:disabled { opacity: .4; cursor: default; }
+    .cloud-setup-box { margin: 0 16px; background: var(--s2); border: 1.5px dashed var(--s3); border-radius: var(--r); padding: 20px; text-align: center; }
+    .cloud-setup-box h3 { font-size: 1rem; margin-bottom: 8px; }
+    .cloud-setup-box p { font-size: .82rem; color: var(--text2); line-height: 1.5; margin-bottom: 14px; }
+    .sql-block { background: var(--bg); border: 1px solid var(--s3); border-radius: var(--r-sm); padding: 12px; font-family: monospace; font-size: .72rem; color: var(--teal); text-align: left; white-space: pre-wrap; overflow-x: auto; margin: 10px 0; line-height: 1.6; }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #0b0b10; font-size: .72rem; font-weight: 800; flex-shrink: 0; }
+
+    /* ===== MODAL ===== */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 300; display: none; align-items: flex-end; justify-content: center; }
+    .modal-backdrop.active { display: flex; }
+    .modal-sheet {
+      background: var(--s2); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px;
+      max-height: 90vh; overflow-y: auto; padding: 12px 20px calc(20px + var(--safe-b));
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+    .modal-handle { width: 40px; height: 4px; background: var(--s4); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; background: var(--s3); border: 1px solid var(--s4); border-radius: var(--r-sm);
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; padding: 12px 14px;
+      outline: none; transition: border-color .15s; -webkit-appearance: none;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--teal); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .color-picker { display: flex; gap: 10px; flex-wrap: wrap; }
+    .color-option { width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform .15s, border-color .15s; }
+    .color-option:active { transform: scale(.9); }
+    .color-option.selected { border-color: var(--text); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .modal-actions .btn { flex: 1; height: 50px; }
+    .toggle-group { display: flex; background: var(--s3); border-radius: var(--r-sm); padding: 3px; gap: 3px; }
+    .toggle-option { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: background .15s, color .15s; }
+    .toggle-option.active { background: var(--teal); color: #0b0b10; }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 0; height: 0; }
+   
+    /* ===== UTILITY ===== */
+    .mt-8  { margin-top:  8px; }
+    .mt-16 { margin-top: 16px; }
+    .px-16 { padding-left: 16px; padding-right: 16px; }
+    .hidden { display: none !important; }
+    .divider { height: 1px; background: var(--s3); margin: 4px 0; }
+  </style>
+
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== SCREENS ===== -->
+
+  <div class="screen active" id="screen-home">
+    <div class="screen-content" id="home-content"></div>
+  </div>
+
+  <div class="screen" id="screen-routines">
+    <div class="screen-content" id="routines-content"></div>
+    <button class="fab" id="fab-add" onclick="openEditRoutine(null)" aria-label="Routine hinzufügen">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <div class="screen" id="screen-detail">
+    <div class="screen-content" id="detail-content"></div>
+  </div>
+
+  <div class="screen" id="screen-stats">
+    <div class="screen-content" id="stats-content"></div>
+  </div>
+
+  <div class="screen" id="screen-settings">
+    <div class="screen-content" id="settings-content"></div>
+  </div>
+
+  <!-- ===== WORKOUT PLAYER ===== -->
+
+  <div class="player-overlay" id="player-overlay">
+    <div class="player-top-bar">
+      <button class="btn-icon" onclick="Player.confirmExit()" aria-label="Beenden">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="player-routine-label" id="p-routine-label"></span>
+      <span class="player-progress-label" id="p-progress"></span>
+    </div>
+    <div class="player-body" id="p-body"></div>
+    <div class="player-progress-bar">
+      <div class="player-progress-fill" id="p-fill"></div>
+    </div>
+  </div>
+
+  <!-- ===== REST SCREEN ===== -->
+
+  <div class="player-overlay rest-overlay" id="rest-overlay">
+    <div class="player-top-bar">
+      <button class="btn-icon" onclick="Player.confirmExit()" aria-label="Beenden">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <span class="player-routine-label" id="r-routine-label"></span>
+      <span class="player-progress-label" id="r-progress"></span>
+    </div>
+    <div class="rest-body">
+      <span class="rest-tag">⚡ Erholung</span>
+      <span class="rest-title">PAUSE</span>
+      <div class="rest-timer-num" id="r-timer">60</div>
+      <div class="rest-progress"><div class="rest-progress-fill" id="r-fill"></div></div>
+      <div class="rest-next-label">Nächste Übung</div>
+      <div class="rest-next-name" id="r-next-name">—</div>
+      <div class="rest-controls">
+        <button class="btn-rest-skip" onclick="Player.skipRest()">Überspringen</button>
+        <button class="btn-rest-add"  onclick="Player.addRestTime(30)">+30 Sek.</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COMPLETE SCREEN ===== -->
+
+  <div class="player-overlay complete-overlay" id="complete-overlay">
+    <div class="complete-body" id="complete-body"></div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-tab="home" onclick="showTab('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Start
+    </button>
+    <button class="nav-btn" data-tab="routines" onclick="showTab('routines')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Routinen
+    </button>
+    <button class="nav-btn" data-tab="stats" onclick="showTab('stats')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6"  y1="20" x2="6"  y2="14"/></svg>
+      Log
+    </button>
+    <button class="nav-btn" data-tab="settings" onclick="showTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Einstellungen
+    </button>
+  </nav>
+
+  <!-- ===== MODAL ===== -->
+
+  <div class="modal-backdrop" id="modal-backdrop" onclick="closeModal(event)">
+    <div class="modal-sheet" id="modal-sheet">
+      <div class="modal-handle"></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for import -->
+
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+
+</div><!-- #app -->
+
+<script>
+'use strict';
+
+/* =========================================================
+   HILFSFUNKTIONEN
+   ========================================================= */
+function uuid() {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m > 0 ? `${m} Min. ${s > 0 ? s + ' Sek.' : ''}`.trim() : `${s} Sek.`;
+}
+
+function fmtDuration(sec) {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function escapeSvg(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* =========================================================
+   FARB-MAP
+   ========================================================= */
+const COLOR_MAP = { teal: '#2dd4bf', blue: '#60a5fa', amber: '#fbbf24', coral: '#f87171' };
+const COLOR_LABELS = { teal: 'Blaugrün', blue: 'Blau', amber: 'Bernstein', coral: 'Koralle' };
+
+/* =========================================================
+   WEB AUDIO API – BEEP
+   ========================================================= */
+let _audioCtx = null;
+function playBeep(freq = 880, duration = 0.12, vol = 0.25) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.connect(gain); gain.connect(_audioCtx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, _audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + duration);
+    osc.start(); osc.stop(_audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+/* =========================================================
+   WAKE LOCK API
+   ========================================================= */
+let _wakeLock = null;
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try { _wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+}
+function releaseWakeLock() {
+  if (_wakeLock) { _wakeLock.release().catch(()=>{}); _wakeLock = null; }
+}
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && _wakeLock === null && Player.state) {
+    await requestWakeLock();
+  }
+});
+
+/* =========================================================
+   INDEXEDDB WRAPPER
+   ========================================================= */
+const DB = (() => {
+  let _db = null;
+  const STORES = { routines: 'routines', logs: 'logs', settings: 'settings' };
+
+  function dbName() {
+    const pid = Profiles.getCurrent();
+    return pid ? `trainflow-db-${pid}` : 'trainflow-db-default';
+  }
+
+  function open() {
+    return new Promise((resolve, reject) => {
+      if (_db && _db._profileId === Profiles.getCurrent()) return resolve(_db);
+      _db = null; // profile changed, reopen
+      const req = indexedDB.open(dbName(), 1);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('routines'))  db.createObjectStore('routines',  { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('logs'))      db.createObjectStore('logs',      { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('settings'))  db.createObjectStore('settings',  { keyPath: 'key' });
+      };
+      req.onsuccess = e => {
+        _db = e.target.result;
+        _db._profileId = Profiles.getCurrent();
+        resolve(_db);
+      };
+      req.onerror = e => reject(e.target.error);
+    });
+  }
+
+  function tx(storeName, mode, fn) {
+    return open().then(db => new Promise((resolve, reject) => {
+      const tx    = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      const req   = fn(store);
+      if (req && req.onsuccess !== undefined) {
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+      } else {
+        tx.oncomplete = () => resolve();
+        tx.onerror    = e  => reject(e.target.error);
+      }
+    }));
+  }
+
+  return {
+    getAllRoutines: () => tx('routines', 'readonly', s => s.getAll()),
+    saveRoutine:   r  => tx('routines', 'readwrite', s => s.put(r)),
+    deleteRoutine: id => tx('routines', 'readwrite', s => s.delete(id)),
+
+    getAllLogs:  ()  => tx('logs', 'readonly',  s => s.getAll()),
+    saveLog:    log => tx('logs', 'readwrite',  s => s.put(log)),
+    deleteLog:  id  => tx('logs', 'readwrite',  s => s.delete(id)),
+
+    getSetting: key => tx('settings', 'readonly',  s => s.get(key)).then(r => r?.value),
+    setSetting: (key, value) => tx('settings', 'readwrite', s => s.put({ key, value })),
+
+    clearAll: async () => {
+      await tx('routines', 'readwrite', s => s.clear());
+      await tx('logs',     'readwrite', s => s.clear());
+      await tx('settings', 'readwrite', s => s.clear());
+    }
+  };
+})();
+
+/* =========================================================
+   VORDEFINIERTE ROUTINEN
+   ========================================================= */
+function makeEx(name, desc, duration, sets, rest = 20, reps = 0) {
+  return { id: uuid(), name, description: desc, duration, sets, rest, reps };
+}
+
+// Hilfsfunktion: Übungen von Routine A (Hüfte & Beine)
+function exRoutineA() {
+  return [
+    makeEx('Fußknöchel-Kreise',          'Jede Seite: Kreise aus dem Sprunggelenk, Hüfte & Knie still',         20, 4),
+    makeEx('Hüftkreise',                  'Becken vorn–Seite–hinten, Oberkörper stabil',                          20, 2),
+    makeEx('Cat-Cow',                     'Wirbel für Wirbel: erst Cat, dann Cow',                               'reps', 1, 20, 10),
+    makeEx('Leg Swings vorne/hinten',     'Jede Seite: aus der Hüfte schwingen, nicht drehen',                   'reps', 2, 20, 20),
+    makeEx('Side Leg Swings',             'Jede Seite: seitlich wegschwingen, Becken nicht kippen',              'reps', 2, 20, 15),
+    makeEx('90/90 Drops',                 'Knie rechts und links fallen lassen, Hüfte aufrecht',                 'reps', 1, 20, 15),
+    makeEx('90/90 Sit',                   'Jede Seite: Brust über vorderes Schienbein, Rücken lang',              30, 4),
+    makeEx('Hip Airplanes',               'Jede Seite: einbeinig, Hüfte seitlich öffnen wie Flügel',            'reps', 2, 20, 5),
+    makeEx('Spiderman Lunge + Rotation',  'Jede Seite: Hände innen, Brust aufdrehen',                           'reps', 2, 20, 5),
+    makeEx('Piriformis Stretch (Figure-4)','Jede Seite: Knöchel aufs Knie, Beine zur Brust',                     40, 2),
+    makeEx('Wadendehnung',                'Jede Seite: Ferse am Boden, Wand abstützen',                          30, 4),
+    makeEx('Saddle Lifts',                'Kniestand, Beine abwechselnd anheben',                               'reps', 1, 20, 20),
+    makeEx('Sitting Hamstring Stretch',   'Gerade Beine, nach vorne beugen',                                     30, 2),
+    makeEx('Standing Quad Stretch',       'Jede Seite: Ferse zum Gesäß, Knie gebeugt',                           30, 4),
+    makeEx('Adductor Sitback',            'Jede Seite: Kniestand, Bein seitlich, zur Ferse zurückfallen',        30, 4),
+    makeEx('Pigeon Pose',                 'Jede Seite: vorderes Bein 90°, Oberkörper nach vorne',               30, 4),
+  ];
+}
+
+// Hilfsfunktion: Übungen von Routine C (Plyometric)
+function exRoutineC() {
+  return [
+    makeEx('A-Skips',                            'Knie explosiv hoch, Ballen, Arme im Gegentakt',                 35, 1),
+    makeEx('Bounds (50m)',                        'Weite Sprünge, Hüfte hoch, Knie nach vorne',                  'reps', 2, 30, 1),
+    makeEx('Flying Starts (15m)',                 '10m Anlauf, dann 15m maximal',                                'reps', 5, 30, 1),
+    makeEx('Drop Jumps',                          'Von Box fallen, sofort hoch, leise Landung',                  'reps', 3, 20, 5),
+    makeEx('Pogo Jumps',                          'Mini-Sprünge nur aus Knöcheln, Fersen nicht aufsetzen',        25, 3),
+    makeEx('Kneeling Jumps',                      'Aus dem Knien in Squat-Position landen',                      'reps', 3, 20, 5),
+    makeEx('Explosive Bulgarian Split Squat Jumps','Jede Seite: hinteres Bein auf Bank, explosiv abspringen',   'reps', 6, 25, 6),
+    makeEx('Stair Sprints',                       'Treppe hoch, hohe Knie, kurze Kontakte',                       12, 3),
+    makeEx('Vertical Jumps',                      '¼-Squat, explosiv hoch, weiche Landung',                     'reps', 3, 20, 6),
+    makeEx('Broad Jumps',                         'Arme zurück, explosiv nach vorne, stabile Landung',           'reps', 3, 20, 5),
+    makeEx('Band Hip Flexion',                    'Jede Seite: Band am Boden, Knie explosiv hoch',               'reps', 6, 20, 12),
+    makeEx('Tibialis Band Raises',                'Ferse am Boden, Fußspitze gegen Band hochziehen',             'reps', 3, 20, 15),
+    makeEx('Standing Triple Jumps',               '2× links-rechts-links, 2× rechts-links-rechts',              'reps', 1, 30, 4),
+  ];
+}
+
+const PRESET_ROUTINES = [
+  {
+    id: 'preset-a',
+    name: 'Mobility: Hüfte & Beine',
+    description: 'Umfassendes Mobilitätsprogramm für Hüfte, Knie und Sprunggelenke',
+    colorTag: 'teal',
+    isPreset: true,
+    order: 0,
+    exercises: exRoutineA()
+  },
+  {
+    id: 'preset-b',
+    name: 'Mobility: Schultern & Nacken',
+    description: 'Mobilitätsroutine für Schultern, Nacken und obere Körperhälfte',
+    colorTag: 'blue',
+    isPreset: true,
+    order: 1,
+    exercises: [
+      makeEx('Handgelenk-Mobilisation',  'Vor/zurück wippen, dann seitlich',                                   60, 1),
+      makeEx('Große Armkreise',          'Weit ausgestreckt, Schultern unten halten',                          30, 1),
+      makeEx('Shoulder CARs',            'Jede Seite: größtmöglicher Kreis, aktive Rotation',                 'reps', 2, 20, 5),
+      makeEx('Wall Slides',              'Ellbogen & Handrücken an Wand, über Kopf schieben',                 'reps', 1, 20, 10),
+      makeEx('Thread the Needle',        'Jede Seite: Vierfüßler, Arm unter Körper durchschieben',             30, 2),
+      makeEx('Scapula Push-Ups',         'Plank-Position: Schulterblätter zusammen/auseinander',              'reps', 1, 20, 10),
+      makeEx('Trizeps Stretch',          'Jede Seite: Arm über Kopf, Hand zwischen Schulterblätter',          30, 2),
+      makeEx('Brustdehnung an Wand',     'Jede Seite: Unterarm an Wand, Brust wegdrehen',                     30, 2),
+      makeEx('Lat Stretch',              'Jede Seite: Hand an Wand, Hüfte zurücklehnen',                      30, 2),
+      makeEx('Nacken Stretch',           'Jede Seite: Kopf seitlich neigen, Schultern bewusst unten',         35, 2),
+      makeEx('Cat-Cow',                  'Wirbel für Wirbel – langsam und kontrolliert',                      'reps', 1, 20, 10),
+      makeEx('External Rotation',        'Rotator Cuff mit Band – kontrollierte Bewegung',                    'reps', 3, 20, 10),
+    ]
+  },
+  {
+    id: 'preset-c',
+    name: 'Plyometric Workout',
+    description: 'Explosivkraft, Reaktivität und Sprungleistung steigern',
+    colorTag: 'amber',
+    isPreset: true,
+    order: 2,
+    exercises: exRoutineC()
+  },
+  {
+    id: 'preset-d',
+    name: 'Plyometric & Sprint Workout',
+    description: 'Vollständiges Athletik-Training: Aufwärmen, Sprinten, Regeneration',
+    colorTag: 'coral',
+    isPreset: true,
+    order: 3,
+    exercises: [
+      ...exRoutineC(),
+      makeEx('20m Beschleunigung',  'All-out, explosiver Start',   'reps', 6, 90, 1),
+      makeEx('40m Maxsprint',       'Maximale Geschwindigkeit, volle Erholung zwischen den Läufen', 'reps', 4, 120, 1),
+      makeEx('20m Flying Sprint',   'Locker anlaufen, 20m maximal', 'reps', 2, 120, 1),
+      ...exRoutineA()
+    ]
+  }
+];
+
+/* =========================================================
+   APP STATE
+   ========================================================= */
+const State = {
+  tab: 'home',
+  routines: [],
+  logs: [],
+  detailRoutineId: null,
+  prevTab: null,
+};
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+function showTab(tab) {
+  // Deactivate all screens
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  let screenId;
+  if (tab === 'home')      screenId = 'screen-home';
+  else if (tab === 'routines') screenId = 'screen-routines';
+  else if (tab === 'detail')   screenId = 'screen-detail';
+  else if (tab === 'stats')    screenId = 'screen-stats';
+  else if (tab === 'settings') screenId = 'screen-settings';
+
+  document.getElementById(screenId).classList.add('active');
+
+  const navBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  State.tab = tab;
+
+  // Render content
+  if (tab === 'home')       renderHome();
+  else if (tab === 'routines') renderRoutines();
+  else if (tab === 'detail')   renderDetail();
+  else if (tab === 'stats')    renderStats();
+  else if (tab === 'settings') renderSettings();
+}
+
+function goToDetail(routineId) {
+  State.prevTab = State.tab;
+  State.detailRoutineId = routineId;
+  showTab('detail');
+}
+
+/* =========================================================
+   HOME SCREEN
+   ========================================================= */
+function renderHome() {
+  const today = new Date();
+  const hours = today.getHours();
+  let greeting = hours < 12 ? 'Guten Morgen' : hours < 17 ? 'Guten Tag' : 'Guten Abend';
+ 
+  const logs = State.logs;
+  const streak = calcStreak(logs);
+  const totalSessions = logs.length;
+  const thisWeek = logs.filter(l => {
+    const d = new Date(l.date);
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1);
+    weekStart.setHours(0,0,0,0);
+    return d >= weekStart;
+  }).length;
+
+  // Last used routine
+  let lastRoutineId = null;
+  if (logs.length > 0) {
+    const lastLog = [...logs].sort((a,b) => b.completedAt.localeCompare(a.completedAt))[0];
+    lastRoutineId = lastLog.routineId;
+  }
+
+  // Suggest routines: last used first, then rest
+  let suggested = [...State.routines];
+  if (lastRoutineId) {
+    const idx = suggested.findIndex(r => r.id === lastRoutineId);
+    if (idx > 0) { const [r] = suggested.splice(idx, 1); suggested.unshift(r); }
+  }
+
+  const html = `
+    <div class="home-hero">
+      <div class="home-greeting">${greeting} 👋</div>
+      <div class="home-title">TRAINFLOW</div>
+      <div class="home-subtitle">Bereit für dein Training?</div>
+    </div>
+
+    <div class="quick-stat-row">
+      <div class="quick-stat">
+        <div class="quick-stat-num">${streak}</div>
+        <div class="quick-stat-label">🔥 Streak (Tage)</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-num">${thisWeek}</div>
+        <div class="quick-stat-label">Diese Woche</div>
+      </div>
+    </div>
+
+    <div class="section-label">${lastRoutineId ? 'Zuletzt benutzt' : 'Routinen'}</div>
+    ${suggested.slice(0, 3).map(r => routineCardHtml(r, true)).join('')}
+  `;
+  document.getElementById('home-content').innerHTML = html;
+}
+
+/* =========================================================
+   ROUTINEN-LISTE
+   ========================================================= */
+function renderRoutines() {
+  const html = `
+    <div class="page-header">
+      <h1>ROUTINEN</h1>
+      <p>${State.routines.length} Routine${State.routines.length !== 1 ? 'n' : ''} verfügbar</p>
+    </div>
+    ${State.routines.map(r => routineCardHtml(r, false)).join('')}
+    <div style="height:80px"></div>
+  `;
+  document.getElementById('routines-content').innerHTML = html;
+}
+
+function routineCardHtml(r, showStart) {
+  const color = COLOR_MAP[r.colorTag] || '#2dd4bf';
+  const exCount = r.exercises.length;
+  const timed = r.exercises.filter(e => e.duration !== 'reps');
+  const totalSec = timed.reduce((s, e) => s + e.duration * e.sets, 0);
+  const approxMin = Math.round(totalSec / 60) + Math.round(exCount * 0.5);
+
+  return `
+    <div class="routine-card accent-${r.colorTag}" style="--accent:${color}" onclick="goToDetail('${r.id}')">
+      <div class="routine-card-header">
+        <div class="routine-card-meta">
+          <div class="routine-card-name">${r.name}</div>
+          ${r.description ? `<div class="routine-card-desc">${r.description}</div>` : ''}
+        </div>
+        <span class="badge badge-${r.colorTag}" style="flex-shrink:0">${r.colorTag === 'teal' ? '🏃' : r.colorTag === 'blue' ? '💪' : r.colorTag === 'amber' ? '⚡' : '🔥'}</span>
+      </div>
+      <div class="routine-card-stats">
+        <span class="routine-card-stat">
+          <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          ${exCount} Übungen
+        </span>
+        <span class="routine-card-stat">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ~${approxMin} Min.
+        </span>
+      </div>
+      ${showStart ? `<button class="btn-start" onclick="event.stopPropagation(); startWorkout('${r.id}')">Training starten</button>` : ''}
+    </div>
+  `;
+}
+
+/* =========================================================
+   ROUTINE DETAIL
+   ========================================================= */
+function renderDetail() {
+  const r = State.routines.find(r => r.id === State.detailRoutineId);
+  if (!r) { showTab('routines'); return; }
+ 
+  const color = COLOR_MAP[r.colorTag] || '#2dd4bf';
+
+  const html = `
+    <div class="detail-header accent-${r.colorTag}" style="--accent:${color}">
+      <div class="detail-header-top">
+        <button class="btn-icon" onclick="showTab('${State.prevTab || 'routines'}')" style="margin-left:-10px">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="badge badge-${r.colorTag}">${r.colorTag === 'teal' ? '🏃' : r.colorTag === 'blue' ? '💪' : r.colorTag === 'amber' ? '⚡' : '🔥'} ${r.colorTag.charAt(0).toUpperCase()+r.colorTag.slice(1)}</span>
+        <button class="btn-icon" onclick="openEditRoutine('${r.id}')" style="margin-left:auto" title="Bearbeiten">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon" onclick="confirmDeleteRoutine('${r.id}')" style="color:var(--coral)">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        </button>
+      </div>
+      <h1>${r.name}</h1>
+      ${r.description ? `<p>${r.description}</p>` : ''}
+    </div>
+
+    <div class="detail-start-bar">
+      <button class="btn btn-primary btn-full" style="background:${color}; color:#0b0b10" onclick="startWorkout('${r.id}')">
+        <svg style="width:18px;height:18px;fill:#0b0b10;stroke:none" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Training starten
+      </button>
+    </div>
+
+    <div class="exercises-list" id="ex-list-${r.id}">
+      ${r.exercises.map((ex, i) => exerciseItemHtml(ex, i, r, color)).join('')}
+      <button class="add-exercise-btn" onclick="openEditExercise(null, '${r.id}')">
+        <svg style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Übung hinzufügen
+      </button>
+    </div>
+    <div style="height:20px"></div>
+  `;
+  document.getElementById('detail-content').innerHTML = html;
+
+  initDragDrop(r.id);
+}
+
+function exerciseItemHtml(ex, i, r, color) {
+  const durationLabel = ex.duration === 'reps'
+    ? `${ex.reps} Wdh.${ex.sets > 1 ? ` × ${ex.sets} Sätze` : ''}`
+    : `${ex.duration}s${ex.sets > 1 ? ` × ${ex.sets} Sätze` : ''}`;
+  const restLabel = `${ex.rest}s Pause`;
+
+  return `
+    <div class="exercise-item" data-ex-id="${ex.id}" data-idx="${i}">
+      <div class="drag-handle" title="Ziehen zum Sortieren">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/></svg>
+      </div>
+      <div class="ex-info">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-meta">
+          <span>${durationLabel}</span>
+          <span>·</span>
+          <span>${restLabel}</span>
+        </div>
+        ${ex.description ? `<div style="font-size:.75rem;color:var(--text3);margin-top:3px;line-height:1.4">${ex.description}</div>` : ''}
+      </div>
+      <div class="ex-actions">
+        <button class="btn-icon" onclick="openEditExercise('${ex.id}','${r.id}')" title="Bearbeiten">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon" style="color:var(--coral)" onclick="deleteExercise('${ex.id}','${r.id}')" title="Löschen">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   DRAG & DROP (für Übungs-Reihenfolge)
+   ========================================================= */
+function initDragDrop(routineId) {
+  const list = document.getElementById(`ex-list-${routineId}`);
+  if (!list) return;
+
+  let dragEl = null, startY = 0, currentY = 0;
+
+  list.addEventListener('pointerdown', e => {
+    const handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    e.preventDefault();
+
+    dragEl = handle.closest('.exercise-item');
+    if (!dragEl) return;
+
+    startY = e.clientY;
+    currentY = e.clientY;
+    dragEl.classList.add('dragging');
+    dragEl.style.zIndex = 50;
+
+    list.setPointerCapture(e.pointerId);
+  }, { passive: false });
+
+  list.addEventListener('pointermove', e => {
+    if (!dragEl) return;
+    const dy = e.clientY - currentY;
+    currentY = e.clientY;
+
+    dragEl.style.transform = `translateY(${e.clientY - startY}px)`;
+    dragEl.style.position = 'relative';
+
+    // Find sibling to swap with
+    const items = [...list.querySelectorAll('.exercise-item:not(.dragging)')];
+    const dragMid = dragEl.getBoundingClientRect().top + dragEl.offsetHeight / 2;
+
+    for (const item of items) {
+      const rect = item.getBoundingClientRect();
+      const itemMid = rect.top + rect.height / 2;
+
+      if (Math.abs(dragMid - itemMid) < rect.height * 0.55) {
+        const allItems = [...list.querySelectorAll('.exercise-item')];
+        const dragIdx = allItems.indexOf(dragEl);
+        const targetIdx = allItems.indexOf(item);
+
+        if (dragIdx < targetIdx) list.insertBefore(item, dragEl);
+        else list.insertBefore(dragEl, item);
+
+        startY += (e.clientY - currentY);
+        break;
+      }
+    }
+  });
+
+  list.addEventListener('pointerup', async () => {
+    if (!dragEl) return;
+    dragEl.style.transform = '';
+    dragEl.style.position = '';
+    dragEl.style.zIndex = '';
+    dragEl.classList.remove('dragging');
+    dragEl = null;
+
+    // Read new order from DOM and save
+    const r = State.routines.find(r => r.id === routineId);
+    if (!r) return;
+    const newOrder = [...list.querySelectorAll('.exercise-item')].map(el => el.dataset.exId);
+    r.exercises = newOrder.map(id => r.exercises.find(ex => ex.id === id)).filter(Boolean);
+    await DB.saveRoutine(r);
+    // Re-render silently (indices updated)
+    renderDetail();
+  });
+}
+
+/* =========================================================
+   EDIT ROUTINE MODAL
+   ========================================================= */
+function openEditRoutine(routineId) {
+  const r = routineId ? State.routines.find(r => r.id === routineId) : null;
+  const isNew = !r;
+
+  const colorOptions = Object.entries(COLOR_MAP).map(([key, val]) => `
+    <div class="color-option ${r?.colorTag === key || (!r && key === 'teal') ? 'selected' : ''}"
+      style="background:${val}"
+      data-color="${key}"
+      onclick="this.parentNode.querySelectorAll('.color-option').forEach(o=>o.classList.remove('selected')); this.classList.add('selected')">
+    </div>
+  `).join('');
+
+  openModal(`
+    <div class="modal-title">${isNew ? 'Neue Routine' : 'Routine bearbeiten'}</div>
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="f-name" placeholder="z.B. Morgen-Stretching" value="${r?.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>Beschreibung</label>
+      <textarea id="f-desc" placeholder="Optional...">${r?.description || ''}</textarea>
+
+```
+</div>
+<div class="form-group">
+  <label>Farbe</label>
+  <div class="color-picker">${colorOptions}</div>
+</div>
+<div class="modal-actions">
+  <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+  <button class="btn btn-primary" onclick="saveRoutine('${routineId || ''}')">
+    ${isNew ? 'Erstellen' : 'Speichern'}
+  </button>
+</div>
+```
+
+`);
+}
+
+async function saveRoutine(routineId) {
+const name = document.getElementById(‘f-name’).value.trim();
+if (!name) { alert(‘Bitte einen Namen eingeben.’); return; }
+
+const colorTag = document.querySelector(’.color-option.selected’)?.dataset.color || ‘teal’;
+const desc = document.getElementById(‘f-desc’).value.trim();
+
+const isNew = !routineId;
+const r = routineId ? State.routines.find(r => r.id === routineId) : null;
+
+const updated = {
+id: routineId || uuid(),
+name, description: desc, colorTag,
+isPreset: false,
+order: r?.order ?? State.routines.length,
+exercises: r?.exercises || [],
+…(r || {})
+};
+updated.name = name; updated.description = desc; updated.colorTag = colorTag;
+
+await DB.saveRoutine(updated);
+if (isNew) State.routines.push(updated);
+else { const idx = State.routines.findIndex(r => r.id === routineId); if (idx >= 0) State.routines[idx] = updated; }
+
+Cloud.bgSync();
+closeModal();
+if (isNew) { State.detailRoutineId = updated.id; State.prevTab = ‘routines’; showTab(‘detail’); }
+else renderDetail();
+}
+
+async function confirmDeleteRoutine(routineId) {
+const r = State.routines.find(r => r.id === routineId);
+if (!r) return;
+openModal(`<div class="modal-title">Routine löschen?</div> <p style="color:var(--text2);font-size:.9rem;line-height:1.5;margin-bottom:20px"> <strong style="color:var(--text)">"${r.name}"</strong> wird dauerhaft gelöscht.<br> Trainingseinträge bleiben erhalten. </p> <div class="modal-actions"> <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button> <button class="btn btn-danger" onclick="doDeleteRoutine('${routineId}')"> <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Löschen </button> </div>`);
+}
+
+async function doDeleteRoutine(routineId) {
+closeModal();
+await DB.deleteRoutine(routineId);
+State.routines = State.routines.filter(r => r.id !== routineId);
+// Auch aus der Cloud löschen (soft: kein Upsert mehr, daher bei nächstem syncDown ignoriert)
+if (Cloud.isLoggedIn()) {
+Cloud.client?.from(‘trainflow_routines’).delete().eq(‘id’, routineId).then(() => {});
+}
+showTab(‘routines’);
+}
+
+/* =========================================================
+EDIT EXERCISE MODAL
+========================================================= */
+function openEditExercise(exId, routineId) {
+const r = State.routines.find(r => r.id === routineId);
+const ex = exId ? r?.exercises.find(e => e.id === exId) : null;
+const isNew = !ex;
+const isDurationReps = ex ? ex.duration === ‘reps’ : false;
+
+openModal(`<div class="modal-title">${isNew ? 'Neue Übung' : 'Übung bearbeiten'}</div> <div class="form-group"> <label>Name</label> <input type="text" id="ef-name" placeholder="z.B. Hip Airplanes" value="${ex?.name || ''}"> </div> <div class="form-group"> <label>Beschreibung (optional)</label> <textarea id="ef-desc" placeholder="Hinweise zur Ausführung...">${ex?.description || ''}</textarea> </div> <div class="form-group"> <label>Modus</label> <div class="toggle-group"> <div class="toggle-option ${!isDurationReps ? 'active' : ''}" id="mode-timer" onclick="setExMode('timer')">⏱ Timer</div> <div class="toggle-option ${isDurationReps ? 'active' : ''}"  id="mode-reps"  onclick="setExMode('reps')">🔢 Wdh.</div> </div> </div> <div class="form-row"> <div class="form-group" id="ef-dur-group" ${isDurationReps ? 'style="display:none"' : ''}> <label>Dauer (Sek.)</label> <input type="number" id="ef-dur" min="5" max="600" value="${ex && ex.duration !== 'reps' ? ex.duration : 30}" inputmode="numeric"> </div> <div class="form-group" id="ef-reps-group" ${!isDurationReps ? 'style="display:none"' : ''}> <label>Wdh.</label> <input type="number" id="ef-reps" min="1" max="100" value="${ex?.reps || 10}" inputmode="numeric"> </div> <div class="form-group"> <label>Sätze</label> <input type="number" id="ef-sets" min="1" max="20" value="${ex?.sets || 3}" inputmode="numeric"> </div> </div> <div class="form-group"> <label>Pause zwischen Sätzen (Sek.)</label> <input type="number" id="ef-rest" min="0" max="300" value="${ex?.rest ?? 20}" inputmode="numeric"> </div> <div class="modal-actions"> <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button> <button class="btn btn-primary" onclick="saveExercise('${exId || ''}','${routineId}')"> ${isNew ? 'Hinzufügen' : 'Speichern'} </button> </div>`);
+}
+
+function setExMode(mode) {
+document.getElementById(‘mode-timer’).classList.toggle(‘active’, mode === ‘timer’);
+document.getElementById(‘mode-reps’).classList.toggle(‘active’, mode === ‘reps’);
+document.getElementById(‘ef-dur-group’).style.display  = mode === ‘timer’ ? ‘’ : ‘none’;
+document.getElementById(‘ef-reps-group’).style.display = mode === ‘reps’  ? ‘’ : ‘none’;
+}
+
+async function saveExercise(exId, routineId) {
+const name = document.getElementById(‘ef-name’).value.trim();
+if (!name) { alert(‘Bitte einen Namen eingeben.’); return; }
+
+const isTimerMode = document.getElementById(‘mode-timer’).classList.contains(‘active’);
+const duration = isTimerMode ? parseInt(document.getElementById(‘ef-dur’).value) || 30 : ‘reps’;
+const reps  = parseInt(document.getElementById(‘ef-reps’).value) || 10;
+const sets  = parseInt(document.getElementById(‘ef-sets’).value) || 1;
+const rest  = parseInt(document.getElementById(‘ef-rest’).value) ?? 20;
+const desc  = document.getElementById(‘ef-desc’).value.trim();
+
+const r = State.routines.find(r => r.id === routineId);
+if (!r) return;
+
+const isNew = !exId;
+const ex = { id: exId || uuid(), name, description: desc, duration, sets, rest, reps };
+
+if (isNew) { r.exercises.push(ex); }
+else { const idx = r.exercises.findIndex(e => e.id === exId); if (idx >= 0) r.exercises[idx] = ex; }
+
+await DB.saveRoutine(r);
+closeModal();
+renderDetail();
+}
+
+function deleteExercise(exId, routineId) {
+const r = State.routines.find(r => r.id === routineId);
+const ex = r?.exercises.find(e => e.id === exId);
+if (!ex) return;
+openModal(`<div class="modal-title">Übung entfernen?</div> <p style="color:var(--text2);font-size:.9rem;line-height:1.5;margin-bottom:20px"> <strong style="color:var(--text)">"${ex.name}"</strong> aus dieser Routine entfernen? </p> <div class="modal-actions"> <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button> <button class="btn btn-danger" onclick="doDeleteExercise('${exId}','${routineId}')">Entfernen</button> </div>`);
+}
+
+async function doDeleteExercise(exId, routineId) {
+closeModal();
+const r = State.routines.find(r => r.id === routineId);
+if (!r) return;
+r.exercises = r.exercises.filter(e => e.id !== exId);
+await DB.saveRoutine(r);
+renderDetail();
+}
+
+/* =========================================================
+MODAL SYSTEM
+========================================================= */
+function openModal(html) {
+document.getElementById(‘modal-body’).innerHTML = html;
+document.getElementById(‘modal-backdrop’).classList.add(‘active’);
+}
+function closeModal(e) {
+if (e && e.target !== document.getElementById(‘modal-backdrop’)) return;
+document.getElementById(‘modal-backdrop’).classList.remove(‘active’);
+document.getElementById(‘modal-backdrop’).style.zIndex = ‘’; // z-index zurücksetzen
+}
+
+/* =========================================================
+WORKOUT PLAYER
+========================================================= */
+const Player = {
+state: null,
+
+start(routineId) {
+const r = State.routines.find(r => r.id === routineId);
+if (!r || !r.exercises.length) { alert(‘Diese Routine hat keine Übungen.’); return; }
+
+```
+this.state = {
+  routine: r,
+  exercises: r.exercises,
+  exIdx: 0,
+  setNum: 1,
+  phase: 'exercise',
+  timeLeft: 0,
+  totalTime: 0,
+  paused: false,
+  tick: null,
+  sessionStart: Date.now(),
+  completedSets: 0,
+};
+
+document.getElementById('p-routine-label').textContent = r.name;
+document.getElementById('r-routine-label').textContent = r.name;
+document.getElementById('player-overlay').classList.add('active');
+document.getElementById('rest-overlay').classList.remove('active');
+document.getElementById('complete-overlay').classList.remove('active');
+document.getElementById('bottom-nav').style.display = 'none';
+
+requestWakeLock();
+this.beginExercise();
+```
+
+},
+
+currentExercise() { return this.state.exercises[this.state.exIdx]; },
+
+beginExercise() {
+const s = this.state;
+const ex = this.currentExercise();
+s.phase = ‘exercise’;
+s.paused = false;
+
+```
+// Update progress
+const total = s.exercises.length;
+document.getElementById('p-progress').textContent = `${s.exIdx + 1}/${total}`;
+document.getElementById('r-progress').textContent = `${s.exIdx + 1}/${total}`;
+document.getElementById('p-fill').style.width = `${((s.exIdx) / total) * 100}%`;
+
+document.getElementById('player-overlay').classList.add('active');
+document.getElementById('rest-overlay').classList.remove('active');
+
+const color = COLOR_MAP[s.routine.colorTag] || '#2dd4bf';
+const isReps = ex.duration === 'reps';
+
+if (isReps) {
+  s.timeLeft = 0; s.totalTime = 0;
+  s.currentReps = ex.reps; // track adjustable reps
+  document.getElementById('p-body').innerHTML = `
+    <div class="player-set-badge">Satz ${s.setNum} von ${ex.sets}</div>
+    <h2 class="player-ex-name">${ex.name}</h2>
+    ${ex.description ? `<p class="player-ex-desc">${ex.description}</p>` : ''}
+    <div class="reps-display" style="border-color:${color}22">
+      <div class="reps-num" style="color:${color}" id="p-reps-num">${ex.reps}</div>
+      <div class="reps-label">Wiederholungen</div>
+    </div>
+    <div class="reps-adj-row">
+      <button class="btn-reps-adj" onclick="Player.adjustReps(-1)">−</button>
+      <div class="reps-adj-num" id="p-reps-adj">${ex.reps}</div>
+      <button class="btn-reps-adj" onclick="Player.adjustReps(1)">+</button>
+    </div>
+    <div class="player-controls">
+      <button class="btn-done-reps" style="background:${color}" onclick="Player.doneReps()">Fertig ✓</button>
+    </div>
+    <div class="player-aux">
+      <button class="btn-skip-ex" onclick="Player.skipExercise()">
+        <svg viewBox="0 0 24 24"><polyline points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        Übung überspringen
+      </button>
+    </div>
+  `;
+} else {
+  s.timeLeft = ex.duration; s.totalTime = ex.duration;
+  const circ = 2 * Math.PI * 95;
+  document.getElementById('p-body').innerHTML = `
+    <div class="player-set-badge">Satz ${s.setNum} von ${ex.sets}</div>
+    <h2 class="player-ex-name">${ex.name}</h2>
+    ${ex.description ? `<p class="player-ex-desc">${ex.description}</p>` : ''}
+    <div class="timer-wrap">
+      <svg class="timer-svg" viewBox="0 0 200 200">
+        <circle class="timer-track" cx="100" cy="100" r="95" style="stroke-dasharray:${circ}"/>
+        <circle class="timer-arc" id="p-arc" cx="100" cy="100" r="95"
+          style="stroke:${color};stroke-dasharray:${circ};stroke-dashoffset:0"/>
+      </svg>
+      <div class="timer-inner">
+        <div class="timer-num" id="p-num">${s.timeLeft}</div>
+        <div class="timer-unit">sek.</div>
+      </div>
+    </div>
+    <div class="player-controls">
+      <button class="btn-play-pause" id="p-pause-btn" style="background:${color}" onclick="Player.togglePause()">
+        <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+    </div>
+    <div class="player-aux">
+      <button class="btn-add-time-ex" onclick="Player.addExerciseTime(30)">+30 Sek.</button>
+      <button class="btn-skip-ex" onclick="Player.skipExercise()">
+        <svg viewBox="0 0 24 24"><polyline points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        Überspringen
+      </button>
+    </div>
+  `;
+  this.startTick();
+}
+```
+
+},
+
+startTick() {
+clearInterval(this.state.tick);
+this.state.tick = setInterval(() => this.tick(), 1000);
+},
+
+tick() {
+const s = this.state;
+if (s.paused) return;
+s.timeLeft = Math.max(0, s.timeLeft - 1);
+
+```
+if (s.phase === 'exercise') this.updateExerciseTimer();
+else if (s.phase === 'rest') this.updateRestTimer();
+
+if (s.timeLeft <= 0) {
+  clearInterval(s.tick);
+  playBeep();
+  if (s.phase === 'exercise') this.onExerciseDone();
+  else this.onRestDone();
+}
+```
+
+},
+
+updateExerciseTimer() {
+const s = this.state;
+const numEl = document.getElementById(‘p-num’);
+const arcEl = document.getElementById(‘p-arc’);
+if (!numEl) return;
+numEl.textContent = s.timeLeft;
+if (arcEl && s.totalTime > 0) {
+const circ = 2 * Math.PI * 95;
+arcEl.style.strokeDashoffset = circ * (1 - s.timeLeft / s.totalTime);
+}
+},
+
+updateRestTimer() {
+const numEl = document.getElementById(‘r-timer’);
+const fillEl = document.getElementById(‘r-fill’);
+if (!numEl) return;
+numEl.textContent = this.state.timeLeft;
+if (fillEl && this.state.totalTime > 0) {
+fillEl.style.width = `${(this.state.timeLeft / this.state.totalTime) * 100}%`;
+}
+},
+
+togglePause() {
+const s = this.state;
+s.paused = !s.paused;
+const btn = document.getElementById(‘p-pause-btn’);
+if (!btn) return;
+const color = COLOR_MAP[s.routine.colorTag] || ‘#2dd4bf’;
+btn.innerHTML = s.paused
+? `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="#0b0b10"/></svg>`
+: `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+},
+
+doneReps() {
+playBeep();
+this.onExerciseDone();
+},
+
+onExerciseDone() {
+const s = this.state;
+s.completedSets++;
+const ex = this.currentExercise();
+const isLastSet = s.setNum >= ex.sets;
+const isLastEx  = s.exIdx >= s.exercises.length - 1;
+
+```
+if (isLastSet && isLastEx) { this.complete(); return; }
+this.beginRest(isLastSet);
+```
+
+},
+
+beginRest(isLastSet) {
+const s = this.state;
+const ex = this.currentExercise();
+s.phase = ‘rest’;
+s.paused = false;
+s.timeLeft = isLastSet ? 60 : (ex.rest || 20);
+s.totalTime = s.timeLeft;
+
+```
+// What comes next?
+let nextName = '';
+if (!isLastSet) nextName = `${ex.name} — Satz ${s.setNum + 1}/${ex.sets}`;
+else {
+  const nextEx = s.exercises[s.exIdx + 1];
+  nextName = nextEx ? nextEx.name : 'Fertig!';
+}
+
+document.getElementById('r-next-name').textContent = nextName;
+document.getElementById('r-timer').textContent = s.timeLeft;
+document.getElementById('r-fill').style.width = '100%';
+
+document.getElementById('player-overlay').classList.remove('active');
+document.getElementById('rest-overlay').classList.add('active');
+
+this.startTick();
+```
+
+},
+
+onRestDone() {
+const s = this.state;
+const ex = this.currentExercise();
+if (s.setNum < ex.sets) s.setNum++;
+else { s.exIdx++; s.setNum = 1; }
+this.beginExercise();
+},
+
+skipRest() { clearInterval(this.state.tick); playBeep(440, 0.08); this.onRestDone(); },
+addRestTime(secs) {
+this.state.timeLeft += secs;
+this.state.totalTime += secs;
+this.updateRestTimer();
+},
+
+// Übung überspringen (zählt nicht als absolviert, geht direkt zur nächsten)
+skipExercise() {
+const s = this.state;
+clearInterval(s.tick);
+const ex = this.currentExercise();
+const isLastEx = s.exIdx >= s.exercises.length - 1;
+if (isLastEx && s.setNum >= ex.sets) { this.complete(); return; }
+// Move to last set of this exercise so advance goes to next exercise
+s.setNum = ex.sets;
+playBeep(440, 0.08);
+this.onExerciseDone();
+},
+
+// +Zeit zur laufenden Übung
+addExerciseTime(secs) {
+const s = this.state;
+s.timeLeft += secs;
+s.totalTime += secs;
+this.updateExerciseTimer();
+// Restart tick if it somehow stopped
+if (!s.tick) this.startTick();
+},
+
+// Wiederholungen im Player anpassen
+adjustReps(delta) {
+const s = this.state;
+s.currentReps = Math.max(1, (s.currentReps || 1) + delta);
+const el = document.getElementById(‘p-reps-adj’);
+if (el) el.textContent = s.currentReps;
+const bigEl = document.getElementById(‘p-reps-num’);
+if (bigEl) bigEl.textContent = s.currentReps;
+},
+
+async complete() {
+clearInterval(this.state.tick);
+releaseWakeLock();
+const s = this.state;
+const duration = Math.round((Date.now() - s.sessionStart) / 1000);
+
+```
+const log = {
+  id: uuid(),
+  date: todayStr(),
+  routineId: s.routine.id,
+  routineName: s.routine.name,
+  colorTag: s.routine.colorTag,
+  duration,
+  exercisesCompleted: s.exercises.length,
+  completedAt: new Date().toISOString()
+};
+await DB.saveLog(log);
+State.logs.push(log);
+
+// Cloud-Sync im Hintergrund (nicht-blockierend)
+Cloud.bgSync();
+setTimeout(() => playBeep(1318, 0.25, 0.3), 200);
+setTimeout(() => playBeep(1568, 0.4, 0.3), 400);
+
+const messages = [
+  'Hervorragende Arbeit! Du hast heute alles gegeben. 💪',
+  'Stark! Jede Einheit bringt dich deinem Ziel näher. 🎯',
+  'Ausgezeichnet! Konsequenz ist der Schlüssel zum Erfolg. 🔑',
+  'Top-Leistung! Dein Körper dankt es dir. ⚡',
+  'Fantastisch! Du wirst jeden Tag stärker und beweglicher. 🏆'
+];
+const msg = messages[Math.floor(Math.random() * messages.length)];
+
+document.getElementById('rest-overlay').classList.remove('active');
+document.getElementById('player-overlay').classList.remove('active');
+document.getElementById('complete-overlay').classList.add('active');
+document.getElementById('complete-body').innerHTML = `
+  <div class="complete-icon">🏆</div>
+  <div class="complete-title" style="color:${COLOR_MAP[s.routine.colorTag] || '#2dd4bf'}">GESCHAFFT!</div>
+  <div class="complete-routine">${s.routine.name}</div>
+  <div class="complete-stats-row">
+    <div class="complete-stat">
+      <div class="complete-stat-num">${fmtDuration(duration)}</div>
+      <div class="complete-stat-label">Dauer</div>
+    </div>
+    <div class="complete-stat">
+      <div class="complete-stat-num">${s.exercises.length}</div>
+      <div class="complete-stat-label">Übungen</div>
+    </div>
+    <div class="complete-stat">
+      <div class="complete-stat-num">${calcStreak(State.logs)}</div>
+      <div class="complete-stat-label">🔥 Streak</div>
+    </div>
+  </div>
+  <div class="complete-message">${msg}</div>
+  <div class="complete-actions">
+    <button class="btn btn-primary btn-full" style="background:${COLOR_MAP[s.routine.colorTag]}" onclick="Player.closeComplete()">Weiter</button>
+  </div>
+`;
+```
+
+},
+
+closeComplete() {
+this.state = null;
+document.getElementById(‘complete-overlay’).classList.remove(‘active’);
+document.getElementById(‘bottom-nav’).style.display = ‘flex’;
+showTab(‘home’);
+},
+
+confirmExit() {
+const s = this.state;
+const elapsed = Math.round((Date.now() - s.sessionStart) / 1000);
+const canSave = elapsed >= 30; // Mindestens 30 Sek. für sinnvollen Eintrag
+
+```
+// Modal über die Player-Overlays legen (z-index beachten)
+document.getElementById('modal-body').innerHTML = `
+  <div class="modal-title">Training beenden?</div>
+  <p style="color:var(--text2);font-size:.88rem;line-height:1.5;margin-bottom:18px">
+    Bisher trainiert: <strong style="color:var(--text)">${fmtDuration(elapsed)}</strong> ·
+    Übung ${s.exIdx + 1} von ${s.exercises.length}
+  </p>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${canSave ? `
+      <button class="btn btn-primary btn-full" onclick="Player.saveAndExit()" style="height:50px">
+        💾 Speichern &amp; beenden
+      </button>
+    ` : ''}
+    <button class="btn btn-ghost btn-full" onclick="Player.forceExit()" style="height:50px">
+      ${canSave ? 'Ohne Speichern beenden' : 'Training beenden'}
+    </button>
+    <button class="btn" style="background:none;color:var(--text2);width:100%;height:44px" onclick="closeModal()">
+      Weitermachen
+    </button>
+  </div>
+`;
+const bd = document.getElementById('modal-backdrop');
+bd.classList.add('active');
+bd.style.zIndex = '350'; // über Player-Overlays
+```
+
+},
+
+async saveAndExit() {
+closeModal();
+const s = this.state;
+if (!s) return;
+const duration = Math.round((Date.now() - s.sessionStart) / 1000);
+const log = {
+id: uuid(),
+date: todayStr(),
+routineId: s.routine.id,
+routineName: s.routine.name,
+colorTag: s.routine.colorTag,
+duration,
+exercisesCompleted: s.exIdx, // Nur abgeschlossene Übungen
+completedAt: new Date().toISOString(),
+partial: true // Markierung: vorzeitig beendet
+};
+await DB.saveLog(log);
+State.logs.push(log);
+Cloud.bgSync();
+this.forceExit();
+},
+
+forceExit() {
+clearInterval(this.state?.tick);
+releaseWakeLock();
+this.state = null;
+document.getElementById(‘player-overlay’).classList.remove(‘active’);
+document.getElementById(‘rest-overlay’).classList.remove(‘active’);
+document.getElementById(‘complete-overlay’).classList.remove(‘active’);
+document.getElementById(‘bottom-nav’).style.display = ‘flex’;
+showTab(‘home’);
+}
+};
+
+function startWorkout(routineId) {
+Player.start(routineId);
+}
+
+/* =========================================================
+STATISTIKEN
+========================================================= */
+function calcStreak(logs) {
+if (!logs.length) return 0;
+const dates = […new Set(logs.map(l => l.date))].sort().reverse();
+const today = todayStr();
+const yesterday = new Date(Date.now() - 86400000).toISOString().split(‘T’)[0];
+if (dates[0] !== today && dates[0] !== yesterday) return 0;
+
+let streak = 0, cur = dates[0];
+for (const d of dates) {
+if (d === cur) {
+streak++;
+const prev = new Date(cur); prev.setDate(prev.getDate() - 1);
+cur = prev.toISOString().split(‘T’)[0];
+} else break;
+}
+return streak;
+}
+
+function renderStats() {
+const logs = State.logs;
+const streak = calcStreak(logs);
+const totalSec = logs.reduce((s, l) => s + (l.duration || 0), 0);
+const totalMin = Math.round(totalSec / 60);
+const totalHours = (totalSec / 3600).toFixed(1);
+
+const now = new Date();
+const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+const weekStart  = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1); weekStart.setHours(0,0,0,0);
+const monthLogs  = logs.filter(l => new Date(l.date) >= monthStart);
+const weekLogs   = logs.filter(l => new Date(l.date) >= weekStart);
+
+const recentLogs = […logs].sort((a,b) => b.completedAt.localeCompare(a.completedAt)).slice(0, 10);
+
+const html = `
+<div class="page-header">
+<h1>TRAINING LOG</h1>
+<p>Dein Fortschritt auf einen Blick</p>
+</div>
+
+```
+<div class="stats-grid">
+  <div class="stat-box streak-box">
+    <div class="streak-flame">🔥</div>
+    <div class="streak-info">
+      <div class="streak-num">${streak}</div>
+      <div class="streak-label">Tage in Folge</div>
+    </div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-box-num" style="color:var(--teal)">${logs.length}</div>
+    <div class="stat-box-label">Gesamt Einheiten</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-box-num" style="color:var(--blue)">${totalHours}</div>
+    <div class="stat-box-label">Stunden trainiert</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-box-num" style="color:var(--amber)">${monthLogs.length}</div>
+    <div class="stat-box-label">Diesen Monat</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-box-num" style="color:var(--coral)">${weekLogs.length}</div>
+    <div class="stat-box-label">Diese Woche</div>
+  </div>
+</div>
+
+<div class="section-label">Aktivitäts-Übersicht (letztes Jahr)</div>
+<div class="heatmap-container">
+  <div class="heatmap-inner" id="heatmap-svg"></div>
+</div>
+
+<div class="chart-container" style="margin-top:16px">
+  <div class="chart-box">
+    <div class="chart-title">Einheiten pro Woche (letzten 8 Wochen)</div>
+    <canvas class="bar-chart" id="bar-chart" width="600" height="140"></canvas>
+  </div>
+</div>
+
+<div class="section-label" style="margin-top:8px">Letzte Einheiten</div>
+<div class="log-list">
+  ${recentLogs.length === 0 ? `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <h3>Noch kein Training</h3>
+      <p>Starte dein erstes Training und dein Fortschritt erscheint hier.</p>
+    </div>
+  ` : recentLogs.map(l => {
+    const color = COLOR_MAP[l.colorTag] || '#2dd4bf';
+    const d = new Date(l.completedAt);
+    const dateLabel = d.toLocaleDateString('de-DE', { weekday:'short', day:'numeric', month:'short' });
+    return `
+      <div class="log-item">
+        <div class="log-dot" style="background:${l.partial ? 'var(--text3)' : color}"></div>
+        <div class="log-info">
+          <div class="log-name">${l.routineName}${l.partial ? ' <span style="font-size:.7rem;color:var(--text3);font-weight:400">(unvollständig)</span>' : ''}</div>
+          <div class="log-meta">${dateLabel} · ${l.exercisesCompleted} Übungen</div>
+        </div>
+        <div class="log-duration" style="color:${l.partial ? 'var(--text3)' : 'var(--text2)'}">${fmtDuration(l.duration)}</div>
+      </div>
+    `;
+  }).join('')}
+</div>
+<div style="height:20px"></div>
+```
+
+`;
+document.getElementById(‘stats-content’).innerHTML = html;
+
+// Render charts after DOM update
+requestAnimationFrame(() => {
+renderHeatmap(logs);
+renderBarChart(logs);
+});
+}
+
+function renderHeatmap(logs) {
+const container = document.getElementById(‘heatmap-svg’);
+if (!container) return;
+
+const counts = {};
+logs.forEach(l => { counts[l.date] = (counts[l.date] || 0) + 1; });
+
+const cellSize = 12, gap = 3, weeks = 52, days = 7;
+const labelW = 18;
+const w = weeks * (cellSize + gap) + labelW;
+const h = days * (cellSize + gap) + 20;
+
+const today = new Date(); today.setHours(0,0,0,0);
+const startDate = new Date(today);
+startDate.setDate(today.getDate() - (weeks * 7 - 1));
+// Align to Monday
+const dayOfWeek = (startDate.getDay() + 6) % 7; // 0=Mon
+startDate.setDate(startDate.getDate() - dayOfWeek);
+
+const months = [];
+let lastMonth = -1;
+
+let rects = ‘’;
+for (let w = 0; w < weeks; w++) {
+for (let d = 0; d < days; d++) {
+const date = new Date(startDate);
+date.setDate(startDate.getDate() + w * 7 + d);
+if (date > today) continue;
+
+```
+  const ds = date.toISOString().split('T')[0];
+  const cnt = counts[ds] || 0;
+  const x = w * (cellSize + gap) + labelW;
+  const y = d * (cellSize + gap) + 16;
+
+  let fill = '#1e1e2a';
+  if (cnt === 1) fill = '#134e4a';
+  else if (cnt === 2) fill = '#0f766e';
+  else if (cnt >= 3) fill = '#2dd4bf';
+
+  rects += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${fill}"/>`;
+
+  // Month labels
+  if (date.getMonth() !== lastMonth && d === 0) {
+    const mLabel = date.toLocaleDateString('de-DE', { month:'short' });
+    rects += `<text x="${x}" y="10" fill="#55556a" font-size="9" font-family="DM Sans, sans-serif">${mLabel}</text>`;
+    lastMonth = date.getMonth();
+  }
+}
+```
+
+}
+
+// Day labels (Mo, Mi, Fr)
+const dayLabels = [‘Mo’,’’,‘Mi’,’’,‘Fr’,’’,‘So’];
+let labels = ‘’;
+dayLabels.forEach((l, i) => {
+if (l) labels += `<text x="0" y="${i * (cellSize + gap) + 16 + cellSize * 0.75}" fill="#55556a" font-size="9" font-family="DM Sans, sans-serif">${l}</text>`;
+});
+
+container.innerHTML = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${labels}${rects}</svg>`;
+}
+
+function renderBarChart(logs) {
+const canvas = document.getElementById(‘bar-chart’);
+if (!canvas) return;
+const ctx = canvas.getContext(‘2d’);
+const W = canvas.offsetWidth * devicePixelRatio;
+const H = canvas.offsetHeight * devicePixelRatio;
+canvas.width = W; canvas.height = H;
+
+const now = new Date(); now.setHours(0,0,0,0);
+
+// Build 8 weeks of data
+const weeks = [];
+for (let i = 7; i >= 0; i–) {
+const weekEnd = new Date(now);
+weekEnd.setDate(now.getDate() - i * 7);
+const weekStart = new Date(weekEnd);
+weekStart.setDate(weekEnd.getDate() - 6);
+weekStart.setHours(0,0,0,0);
+weekEnd.setHours(23,59,59,999);
+
+```
+const count = logs.filter(l => {
+  const d = new Date(l.date);
+  return d >= weekStart && d <= weekEnd;
+}).length;
+
+const label = weekEnd.toLocaleDateString('de-DE', { day:'numeric', month:'numeric' });
+weeks.push({ count, label });
+```
+
+}
+
+const maxVal = Math.max(…weeks.map(w => w.count), 1);
+const BAR_W = Math.floor((W - 40) / weeks.length) - 6;
+const CHART_H = H - 36;
+const CHART_Y = 10;
+
+ctx.clearRect(0, 0, W, H);
+
+weeks.forEach((week, i) => {
+const x = 20 + i * (BAR_W + 6);
+const barH = Math.max(week.count > 0 ? 4 : 0, Math.round((week.count / maxVal) * CHART_H));
+const y = CHART_Y + CHART_H - barH;
+
+```
+// Bar
+const isCurrentWeek = i === 7;
+ctx.fillStyle = isCurrentWeek ? '#2dd4bf' : '#2e2e3e';
+roundRect(ctx, x, y, BAR_W, barH, 3);
+ctx.fill();
+
+// Count label
+if (week.count > 0) {
+  ctx.fillStyle = isCurrentWeek ? '#2dd4bf' : '#9090b0';
+  ctx.font = `bold ${Math.round(10 * devicePixelRatio)}px DM Sans, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(week.count, x + BAR_W / 2, y - 4);
+}
+
+// Date label
+ctx.fillStyle = '#55556a';
+ctx.font = `${Math.round(9 * devicePixelRatio)}px DM Sans, sans-serif`;
+ctx.textAlign = 'center';
+ctx.fillText(week.label, x + BAR_W / 2, H - 4);
+```
+
+});
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+if (h <= 0) return;
+ctx.beginPath();
+ctx.moveTo(x + r, y);
+ctx.lineTo(x + w - r, y);
+ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+ctx.lineTo(x + w, y + h);
+ctx.lineTo(x, y + h);
+ctx.lineTo(x, y + r);
+ctx.quadraticCurveTo(x, y, x + r, y);
+ctx.closePath();
+}
+
+/* =========================================================
+EINSTELLUNGEN
+========================================================= */
+function renderSettings() {
+const profiles = Profiles.getAll();
+const current  = Profiles.getCurrent();
+const curProfile = profiles.find(p => p.id === current);
+
+document.getElementById(‘settings-content’).innerHTML = `
+<div class="page-header">
+<h1>EINSTELLUNGEN</h1>
+<p>Konto, Daten & Anpassungen</p>
+</div>
+
+```
+<div class="settings-section">
+  <div class="section-label">☁ Cloud-Sync</div>
+  ${renderCloudSection()}
+</div>
+
+<div class="settings-section">
+  <div class="section-label">Lokales Profil (dieses Gerät)</div>
+  <div class="settings-row" onclick="openProfileManager()">
+    <div class="settings-icon" style="background:linear-gradient(135deg,var(--teal),var(--blue))">
+      <svg viewBox="0 0 24 24" style="stroke:#0b0b10"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div style="flex:1">
+      <div class="settings-label">${curProfile?.name || 'Standard'}</div>
+      <div style="font-size:.75rem;color:var(--text2);margin-top:2px">${profiles.length} Profil${profiles.length!==1?'e':''} · Tippen zum Wechseln</div>
+    </div>
+    <div class="settings-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+</div>
+
+<div class="settings-section">
+  <div class="section-label">Daten</div>
+  <div class="settings-row" onclick="exportData()">
+    <div class="settings-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </div>
+    <span class="settings-label">Exportieren (JSON-Backup)</span>
+    <div class="settings-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+  <div class="settings-row" onclick="document.getElementById('import-file').click()">
+    <div class="settings-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <span class="settings-label">Importieren (JSON-Backup)</span>
+    <div class="settings-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+</div>
+
+<div class="settings-section">
+  <div class="section-label">Gefahr</div>
+  <div class="settings-row" onclick="resetAllData()">
+    <div class="settings-icon" style="background:rgba(248,113,113,.1)">
+      <svg viewBox="0 0 24 24" style="stroke:var(--coral)"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    </div>
+    <span class="settings-label" style="color:var(--coral)">Lokale Daten zurücksetzen</span>
+    <div class="settings-arrow"><svg viewBox="0 0 24 24" style="stroke:var(--coral)"><polyline points="9 18 15 12 9 6"/></svg></div>
+  </div>
+</div>
+
+<div class="version-note">TrainFlow v1.2 · GitHub Pages + Supabase Cloud-Sync</div>
+```
+
+`;
+}
+
+async function exportData() {
+const data = {
+exportedAt: new Date().toISOString(),
+version: 1,
+routines: State.routines.filter(r => !r.isPreset),
+logs: State.logs
+};
+const blob = new Blob([JSON.stringify(data, null, 2)], { type: ‘application/json’ });
+const url  = URL.createObjectURL(blob);
+const a = document.createElement(‘a’);
+a.href = url; a.download = `trainflow-backup-${todayStr()}.json`;
+a.click(); URL.revokeObjectURL(url);
+}
+
+async function handleImport(event) {
+const file = event.target.files[0];
+if (!file) return;
+try {
+const text = await file.text();
+const data = JSON.parse(text);
+if (!data.version || !Array.isArray(data.logs)) throw new Error(‘Ungültiges Format’);
+
+```
+const routineCount = data.routines?.length || 0;
+const logCount = data.logs.length;
+
+openModal(`
+  <div class="modal-title">Daten importieren?</div>
+  <p style="color:var(--text2);font-size:.9rem;line-height:1.5;margin-bottom:20px">
+    <strong style="color:var(--text)">${logCount}</strong> Trainingseinträge und
+    <strong style="color:var(--text)">${routineCount}</strong> Routinen werden importiert und zu deinen bestehenden Daten hinzugefügt.
+  </p>
+  <div class="modal-actions">
+    <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+    <button class="btn btn-primary" onclick="doImport()">Importieren</button>
+  </div>
+`);
+
+// Store parsed data temporarily for doImport
+window._importData = data;
+```
+
+} catch(e) {
+openModal(`<div class="modal-title" style="color:var(--coral)">Import fehlgeschlagen</div> <p style="color:var(--text2);margin-bottom:16px">${e.message}</p> <button class="btn btn-ghost btn-full" onclick="closeModal()">OK</button>`);
+}
+event.target.value = ‘’;
+}
+
+async function doImport() {
+closeModal();
+const data = window._importData;
+if (!data) return;
+for (const r of (data.routines || [])) {
+if (!State.routines.find(e => e.id === r.id)) {
+await DB.saveRoutine(r); State.routines.push(r);
+}
+}
+for (const l of data.logs) {
+if (!State.logs.find(e => e.id === l.id)) {
+await DB.saveLog(l); State.logs.push(l);
+}
+}
+window._importData = null;
+openModal(`<div class="modal-title">Import erfolgreich ✓</div> <p style="color:var(--text2);margin-bottom:16px">Deine Daten wurden importiert.</p> <button class="btn btn-primary btn-full" onclick="closeModal(); showTab('stats')">Zum Log</button>`);
+}
+
+function resetAllData() {
+openModal(`<div class="modal-title" style="color:var(--coral)">⚠️ Alle Daten löschen?</div> <p style="color:var(--text2);font-size:.9rem;line-height:1.5;margin-bottom:20px"> Alle Trainingseinträge und eigene Routinen dieses Profils werden <strong style="color:var(--coral)">dauerhaft gelöscht</strong>. Die vorinstallierten Routinen werden wiederhergestellt. </p> <div class="modal-actions"> <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button> <button class="btn btn-danger" onclick="doResetAllData()">Alles löschen</button> </div>`);
+}
+
+async function doResetAllData() {
+closeModal();
+await DB.clearAll();
+State.logs = [];
+State.routines = [];
+await loadPresets();
+showTab(‘home’);
+}
+
+/* =========================================================
+CLOUD-SYNC via SUPABASE
+Offline-first: IndexedDB bleibt primärer Speicher.
+Supabase wird genutzt, um Daten geräteübergreifend zu synchronisieren.
+========================================================= */
+const Cloud = {
+client: null,
+user:   null,
+syncing: false,
+lastSync: null,
+
+// Client initialisieren (aus gespeicherten Credentials)
+init() {
+const url = localStorage.getItem(‘sb-url’);
+const key = localStorage.getItem(‘sb-key’);
+if (!url || !key) return false;
+if (!window.supabase) { console.warn(‘Supabase SDK nicht geladen’); return false; }
+try {
+this.client = window.supabase.createClient(url, key, {
+auth: { persistSession: true, autoRefreshToken: true, storageKey: ‘tf-sb-auth’ }
+});
+return true;
+} catch(e) { console.warn(‘Supabase init:’, e); return false; }
+},
+
+// Gespeicherte Session wiederherstellen
+async restore() {
+if (!this.client) return false;
+try {
+const { data: { session } } = await this.client.auth.getSession();
+this.user = session?.user || null;
+return !!this.user;
+} catch(e) { return false; }
+},
+
+isConfigured() { return !!(localStorage.getItem(‘sb-url’) && localStorage.getItem(‘sb-key’) && window.supabase); },
+isLoggedIn()   { return !!this.user; },
+
+// E-Mail-Anmeldung
+async login(email, password) {
+if (!this.client) throw new Error(‘Supabase nicht konfiguriert’);
+const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+if (error) throw new Error(error.message);
+this.user = data.user;
+return data.user;
+},
+
+// Registrierung
+async register(email, password) {
+if (!this.client) throw new Error(‘Supabase nicht konfiguriert’);
+const { data, error } = await this.client.auth.signUp({ email, password });
+if (error) throw new Error(error.message);
+this.user = data.user;
+return data.user;
+},
+
+async logout() {
+await this.client?.auth.signOut().catch(() => {});
+this.user = null;
+},
+
+// Credentials speichern und Client neu initialisieren
+configure(url, key) {
+localStorage.setItem(‘sb-url’, url.trim());
+localStorage.setItem(‘sb-key’, key.trim());
+return this.init();
+},
+
+clearConfig() {
+localStorage.removeItem(‘sb-url’);
+localStorage.removeItem(‘sb-key’);
+this.client = null;
+this.user = null;
+},
+
+/* –– Lokal → Cloud (alle Routinen & Logs hochladen) –– */
+async syncUp() {
+if (!this.client || !this.user || this.syncing) return;
+this.syncing = true;
+this.setBadge(‘syncing’);
+try {
+const uid = this.user.id;
+
+```
+  // Routinen upsert (inkl. Preset-Routinen, damit der Stand übereinstimmt)
+  if (State.routines.length > 0) {
+    const rows = State.routines.map(r => ({ id: r.id, user_id: uid, data: r, updated_at: new Date().toISOString() }));
+    const { error } = await this.client.from('trainflow_routines').upsert(rows, { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  // Logs upsert
+  if (State.logs.length > 0) {
+    const rows = State.logs.map(l => ({ id: l.id, user_id: uid, data: l, logged_at: l.completedAt || new Date().toISOString() }));
+    const { error } = await this.client.from('trainflow_logs').upsert(rows, { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  this.lastSync = new Date();
+  this.setBadge('ok');
+} catch(e) {
+  console.warn('Cloud syncUp:', e);
+  this.setBadge('error');
+  throw e;
+} finally {
+  this.syncing = false;
+}
+```
+
+},
+
+/* –– Cloud → Lokal (neue Einträge herunterladen) –– */
+async syncDown() {
+if (!this.client || !this.user) return;
+try {
+const uid = this.user.id;
+
+```
+  // Routinen
+  const { data: cRoutines, error: rErr } = await this.client
+    .from('trainflow_routines').select('data').eq('user_id', uid);
+  if (rErr) throw rErr;
+
+  let changed = false;
+  for (const row of (cRoutines || [])) {
+    const r = row.data;
+    if (!State.routines.find(x => x.id === r.id)) {
+      await DB.saveRoutine(r); State.routines.push(r); changed = true;
+    }
+  }
+  if (changed) State.routines.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+  // Logs
+  const { data: cLogs, error: lErr } = await this.client
+    .from('trainflow_logs').select('data').eq('user_id', uid);
+  if (lErr) throw lErr;
+
+  for (const row of (cLogs || [])) {
+    const l = row.data;
+    if (!State.logs.find(x => x.id === l.id)) {
+      await DB.saveLog(l); State.logs.push(l);
+    }
+  }
+
+  this.lastSync = new Date();
+} catch(e) { console.warn('Cloud syncDown:', e); }
+```
+
+},
+
+// Beidseitiger Sync
+async fullSync() {
+await this.syncDown();
+await this.syncUp();
+return this.lastSync;
+},
+
+// Nicht-blockierender Hintergrund-Sync nach Aktionen
+bgSync() { if (this.isLoggedIn() && !this.syncing) this.fullSync().catch(() => {}); },
+
+// Sync-Badge in Einstellungen aktualisieren
+setBadge(state) {
+const dot   = document.getElementById(‘cloud-dot’);
+const label = document.getElementById(‘cloud-label’);
+const sub   = document.getElementById(‘cloud-sub’);
+if (!dot) return;
+dot.className = ’cloud-dot ’ + (state === ‘ok’ ? ‘connected’ : state === ‘error’ ? ‘error’ : state === ‘syncing’ ? ‘syncing’ : ‘offline’);
+if (label) label.textContent = state === ‘ok’ ? ’Verbunden · ’ + (this.user?.email || ‘’) :
+state === ‘error’ ? ‘Sync-Fehler’ :
+state === ‘syncing’ ? ‘Synchronisiert …’ : ‘Nicht verbunden’;
+if (sub && this.lastSync) sub.textContent = ’Zuletzt: ’ + this.lastSync.toLocaleTimeString(‘de-DE’, { hour:‘2-digit’, minute:‘2-digit’ });
+}
+};
+
+/* –– Cloud-Settings-UI –– */
+function renderCloudSection() {
+if (!Cloud.isConfigured()) {
+return ` <div class="cloud-setup-box"> <h3>☁️ Cloud-Sync einrichten</h3> <p>Trainiere auf jedem Gerät – Daten automatisch synchronisiert.<br>Powered by <strong>Supabase</strong> (kostenlos).</p> <button class="btn btn-primary" style="width:100%" onclick="openCloudSetup()">Supabase einrichten</button> </div>`;
+}
+if (!Cloud.isLoggedIn()) {
+return ` <div class="settings-row" onclick="openCloudLogin()"> <div class="settings-icon" style="background:rgba(45,212,191,.1)"> <svg viewBox="0 0 24 24" style="stroke:var(--teal)"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> </div> <div style="flex:1"><div class="settings-label">Anmelden / Registrieren</div><div style="font-size:.75rem;color:var(--text2);margin-top:2px">Supabase konfiguriert · Nicht eingeloggt</div></div> <div class="settings-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div> </div>`;
+}
+const lastStr = Cloud.lastSync ? Cloud.lastSync.toLocaleTimeString(‘de-DE’,{hour:‘2-digit’,minute:‘2-digit’}) : ‘Noch nicht’;
+return ` <div class="cloud-status-row"> <div class="cloud-dot connected" id="cloud-dot"></div> <div class="cloud-info"> <div class="cloud-label" id="cloud-label">☁ Verbunden · ${Cloud.user?.email || ''}</div> <div class="cloud-sub" id="cloud-sub">Zuletzt: ${lastStr}</div> </div> <button class="btn-sync" id="btn-manual-sync" onclick="manualSync()">↻ Sync</button> </div> <div style="display:flex;gap:8px;margin:8px 16px 0"> <button class="btn btn-ghost" style="flex:1;font-size:.8rem;height:40px" onclick="openCloudSetup()">Credentials</button> <button class="btn btn-danger" style="flex:1;font-size:.8rem;height:40px" onclick="cloudLogout()">Abmelden</button> </div>`;
+}
+
+async function manualSync() {
+const btn = document.getElementById(‘btn-manual-sync’);
+if (btn) { btn.disabled = true; btn.textContent = ‘…’; }
+Cloud.setBadge(‘syncing’);
+try {
+await Cloud.fullSync();
+Cloud.setBadge(‘ok’);
+renderHome(); // Aktualisierte Daten anzeigen
+} catch(e) {
+Cloud.setBadge(‘error’);
+}
+if (btn) { btn.disabled = false; btn.textContent = ‘↻ Sync’; }
+}
+
+async function cloudLogout() {
+openModal(`<div class="modal-title">Abmelden?</div> <p style="color:var(--text2);font-size:.9rem;margin-bottom:20px">Deine lokalen Daten bleiben erhalten. Du kannst dich jederzeit wieder anmelden.</p> <div class="modal-actions"> <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button> <button class="btn btn-danger" onclick="doCloudLogout()">Abmelden</button> </div>`);
+}
+async function doCloudLogout() {
+await Cloud.logout();
+closeModal();
+renderSettings();
+}
+
+/* –– Setup-Wizard –– */
+function openCloudSetup() {
+const savedUrl = localStorage.getItem(‘sb-url’) || ‘’;
+const savedKey = localStorage.getItem(‘sb-key’) || ‘’;
+const SQL = `create table public.trainflow_routines ( id text primary key, user_id uuid not null references auth.users(id) on delete cascade, data jsonb not null, updated_at timestamptz not null default now() ); create table public.trainflow_logs ( id text primary key, user_id uuid not null references auth.users(id) on delete cascade, data jsonb not null, logged_at timestamptz not null default now() ); alter table public.trainflow_routines enable row level security; alter table public.trainflow_logs enable row level security; create policy "own" on public.trainflow_routines for all using (auth.uid() = user_id); create policy "own" on public.trainflow_logs for all using (auth.uid() = user_id);`;
+
+openModal(`
+<div class="modal-title">☁ Supabase einrichten</div>
+<div style="display:flex;flex-direction:column;gap:14px;font-size:.83rem;line-height:1.6;color:var(--text2)">
+
+```
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <span class="step-num">1</span>
+    <div>Geh zu <a href="https://supabase.com" target="_blank" style="color:var(--teal)">supabase.com</a> → <strong style="color:var(--text)">New project</strong> (kostenlos, kein Kreditkarte)</div>
+  </div>
+
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <span class="step-num">2</span>
+    <div>Im Projekt: <strong style="color:var(--text)">SQL Editor</strong> → dieses SQL einfügen &amp; ausführen:</div>
+  </div>
+  <div class="sql-block">${SQL}</div>
+  <button class="btn btn-ghost" style="height:36px;font-size:.8rem" onclick="navigator.clipboard?.writeText(document.querySelector('.sql-block').textContent)">SQL kopieren</button>
+
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <span class="step-num">3</span>
+    <div><strong style="color:var(--text)">Settings → API</strong> → Project URL und anon/public key kopieren:</div>
+  </div>
+
+  <div class="form-group" style="margin:0">
+    <label>Project URL</label>
+    <input type="url" id="sb-url-input" placeholder="https://xyz.supabase.co" value="${savedUrl}">
+  </div>
+  <div class="form-group" style="margin:0">
+    <label>Anon Key (public)</label>
+    <input type="text" id="sb-key-input" placeholder="eyJhbGci..." value="${savedKey}">
+  </div>
+</div>
+<div class="modal-actions" style="margin-top:16px">
+  <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+  <button class="btn btn-primary" onclick="saveCloudConfig()">Speichern &amp; weiter</button>
+</div>
+```
+
+`);
+}
+
+function saveCloudConfig() {
+const url = document.getElementById(‘sb-url-input’)?.value.trim();
+const key = document.getElementById(‘sb-key-input’)?.value.trim();
+if (!url || !key) { alert(‘Bitte beide Felder ausfüllen.’); return; }
+const ok = Cloud.configure(url, key);
+if (!ok) {
+openModal(`<div class="modal-title" style="color:var(--coral)">Fehler</div><p style="color:var(--text2);margin-bottom:16px">Supabase SDK nicht geladen. Prüfe deine Internetverbindung.</p><button class="btn btn-ghost btn-full" onclick="closeModal()">OK</button>`);
+return;
+}
+closeModal();
+openCloudLogin();
+}
+
+/* –– Login / Register –– */
+function openCloudLogin(mode = ‘login’) {
+const isLogin = mode === ‘login’;
+openModal(`<div class="modal-title">${isLogin ? 'Anmelden' : 'Konto erstellen'}</div> <div id="cloud-auth-error" style="display:none;background:rgba(248,113,113,.1);border:1px solid var(--coral);border-radius:var(--r-sm);padding:10px;margin-bottom:12px;font-size:.82rem;color:var(--coral)"></div> <div class="form-group"> <label>E-Mail</label> <input type="email" id="cl-email" placeholder="deine@email.de" autocomplete="email"> </div> <div class="form-group"> <label>Passwort</label> <input type="password" id="cl-pw" placeholder="Mindestens 6 Zeichen" autocomplete="${isLogin ? 'current-password' : 'new-password'}"> </div> <div class="modal-actions" style="flex-direction:column;gap:8px;margin-top:4px"> <button class="btn btn-primary btn-full" id="cl-submit-btn" onclick="submitCloudAuth('${mode}')" style="height:50px"> ${isLogin ? 'Anmelden' : 'Konto erstellen'} </button> <button class="btn" style="background:none;color:var(--text2);height:44px;width:100%" onclick="openCloudLogin('${isLogin ? 'register' : 'login'}')"> ${isLogin ? 'Noch kein Konto? Registrieren' : 'Bereits registriert? Anmelden'} </button> </div>`);
+setTimeout(() => document.getElementById(‘cl-email’)?.focus(), 100);
+}
+
+async function submitCloudAuth(mode) {
+const email = document.getElementById(‘cl-email’)?.value.trim();
+const pw    = document.getElementById(‘cl-pw’)?.value;
+const errEl = document.getElementById(‘cloud-auth-error’);
+const btn   = document.getElementById(‘cl-submit-btn’);
+if (!email || !pw) { errEl.textContent = ‘Bitte alle Felder ausfüllen.’; errEl.style.display = ‘block’; return; }
+
+btn.disabled = true; btn.textContent = ‘…’;
+try {
+if (mode === ‘login’) await Cloud.login(email, pw);
+else await Cloud.register(email, pw);
+
+```
+closeModal();
+renderSettings();
+
+// Initialer Sync nach Login
+try {
+  await Cloud.fullSync();
+  renderHome();
+  renderStats();
+} catch(e) { console.warn('Initial sync:', e); }
+```
+
+} catch(e) {
+errEl.textContent = e.message;
+errEl.style.display = ‘block’;
+btn.disabled = false;
+btn.textContent = mode === ‘login’ ? ‘Anmelden’ : ‘Konto erstellen’;
+}
+}
+
+/* =========================================================
+LOKALE PROFILE (Accounts – geräteintern, keine Cloud)
+========================================================= */
+const Profiles = {
+// Profile-Liste in localStorage (leichtgewichtig, kein eigenes DB store nötig)
+getAll() {
+try { return JSON.parse(localStorage.getItem(‘tf-profiles’) || ‘[]’); }
+catch { return []; }
+},
+save(profiles) { localStorage.setItem(‘tf-profiles’, JSON.stringify(profiles)); },
+getCurrent() { return localStorage.getItem(‘tf-current-profile’) || null; },
+setCurrent(id) { localStorage.setItem(‘tf-current-profile’, id); },
+
+create(name) {
+const id = uuid();
+const profiles = this.getAll();
+profiles.push({ id, name, createdAt: new Date().toISOString() });
+this.save(profiles);
+return id;
+},
+
+rename(id, newName) {
+const profiles = this.getAll().map(p => p.id === id ? { …p, name: newName } : p);
+this.save(profiles);
+},
+
+async delete(id) {
+// Eigene DB löschen
+await new Promise(res => { const r = indexedDB.deleteDatabase(`trainflow-db-${id}`); r.onsuccess = r.onerror = res; });
+const profiles = this.getAll().filter(p => p.id !== id);
+this.save(profiles);
+}
+};
+
+// Profil-Manager Modal öffnen
+function openProfileManager() {
+const profiles = Profiles.getAll();
+const current  = Profiles.getCurrent();
+
+const profileRows = profiles.map(p => `<div class="profile-item" onclick="switchProfile('${p.id}')"> <div class="profile-avatar" style="${p.id === current ? 'background:linear-gradient(135deg,var(--teal),var(--blue))' : 'background:var(--s3);color:var(--text2)'}"> ${p.name.charAt(0).toUpperCase()} </div> <div class="profile-info"> <div class="profile-name">${p.name}</div> <div class="profile-meta">${p.id === current ? 'Aktiv' : 'Inaktiv'} · ${new Date(p.createdAt).toLocaleDateString('de-DE')}</div> </div> ${p.id === current ? '<div class="profile-check">✓</div>' :`
+<button class="btn-icon" style="color:var(--coral)" onclick="event.stopPropagation(); deleteProfile('${p.id}')" title="Profil löschen">
+<svg viewBox="0 0 24 24" style="width:16px;height:16px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+</button>
+`} </div> `).join(’’);
+
+openModal(`<div class="modal-title">Profile verwalten</div> <p style="font-size:.82rem;color:var(--text2);margin-bottom:16px;line-height:1.5"> Lokale Profile trennen Trainings-Daten auf diesem Gerät.<br> <strong style="color:var(--text)">Kein Internet benötigt.</strong> </p> <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">${profileRows}</div> <button class="btn btn-ghost btn-full" onclick="openCreateProfile()"> <svg style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Neues Profil erstellen </button>`);
+}
+
+function openCreateProfile() {
+openModal(`<div class="modal-title">Neues Profil</div> <div class="form-group"> <label>Name</label> <input type="text" id="new-profile-name" placeholder="z.B. Max, Familie, Arbeit..." autofocus> </div> <div class="modal-actions"> <button class="btn btn-ghost" onclick="openProfileManager()">Zurück</button> <button class="btn btn-primary" onclick="createProfile()">Erstellen</button> </div>`);
+setTimeout(() => document.getElementById(‘new-profile-name’)?.focus(), 100);
+}
+
+async function createProfile() {
+const name = document.getElementById(‘new-profile-name’)?.value.trim();
+if (!name) { alert(‘Bitte einen Namen eingeben.’); return; }
+const id = Profiles.create(name);
+closeModal();
+await switchProfile(id);
+}
+
+async function switchProfile(id) {
+if (id === Profiles.getCurrent()) { closeModal(); return; }
+Profiles.setCurrent(id);
+closeModal();
+// Reload data for new profile (DB uses new profile ID)
+DB._db = null; // force DB reconnect with new profile
+await loadPresets();
+State.logs = await DB.getAllLogs();
+renderHome();
+renderSettings();
+}
+
+function deleteProfile(id) {
+const profiles = Profiles.getAll();
+if (profiles.length <= 1) {
+openModal(`<div class="modal-title">Nicht möglich</div> <p style="color:var(--text2);margin-bottom:16px">Du kannst das letzte Profil nicht löschen.</p> <button class="btn btn-ghost btn-full" onclick="closeModal()">OK</button>`);
+return;
+}
+const profile = profiles.find(p => p.id === id);
+openModal(`<div class="modal-title" style="color:var(--coral)">Profil löschen?</div> <p style="color:var(--text2);font-size:.9rem;line-height:1.5;margin-bottom:20px"> Profil <strong style="color:var(--text)">"${profile?.name}"</strong> und alle zugehörigen Daten werden <strong style="color:var(--coral)">dauerhaft gelöscht</strong>. </p> <div class="modal-actions"> <button class="btn btn-ghost" onclick="openProfileManager()">Abbrechen</button> <button class="btn btn-danger" onclick="doDeleteProfile('${id}')">Profil löschen</button> </div>`);
+}
+
+async function doDeleteProfile(id) {
+closeModal();
+await Profiles.delete(id);
+openProfileManager();
+}
+
+/* =========================================================
+DATEN LADEN & APP-INIT
+========================================================= */
+async function loadPresets() {
+const all = await DB.getAllRoutines();
+const hasPresets = all.some(r => r.isPreset);
+if (!hasPresets) {
+for (const r of PRESET_ROUTINES) await DB.saveRoutine(r);
+}
+State.routines = await DB.getAllRoutines();
+State.routines.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+async function init() {
+// Service Worker registrieren
+if (‘serviceWorker’ in navigator) {
+navigator.serviceWorker.register(’/sw.js’).catch(e => console.warn(‘SW:’, e));
+}
+
+// Profile initialisieren
+let profiles = Profiles.getAll();
+let currentId = Profiles.getCurrent();
+
+// Kein Profil vorhanden? Standard-Profil anlegen
+if (profiles.length === 0) {
+currentId = Profiles.create(‘Standard’);
+Profiles.setCurrent(currentId);
+profiles = Profiles.getAll();
+}
+
+// Kein aktuelles Profil gesetzt? Erstes nehmen
+if (!currentId || !profiles.find(p => p.id === currentId)) {
+currentId = profiles[0].id;
+Profiles.setCurrent(currentId);
+}
+
+// Mehrere Profile: Auswahl-Screen zeigen (wenn > 1)
+if (profiles.length > 1) {
+showProfileScreen(profiles, currentId);
+return; // init wird nach Profil-Auswahl fortgesetzt
+}
+
+await finishInit();
+}
+
+async function finishInit() {
+await loadPresets();
+State.logs = await DB.getAllLogs();
+renderHome();
+
+// AudioContext bei erstem Touch aktivieren (iOS-Workaround)
+document.addEventListener(‘pointerdown’, () => {
+if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (_audioCtx.state === ‘suspended’) _audioCtx.resume();
+}, { once: false });
+
+// Supabase-Client initialisieren und ggf. gespeicherte Session wiederherstellen
+const cloudOk = Cloud.init();
+if (cloudOk) {
+const loggedIn = await Cloud.restore();
+if (loggedIn) {
+// Daten im Hintergrund synchronisieren
+Cloud.syncDown().then(() => {
+renderHome();
+renderStats();
+}).catch(() => {});
+}
+}
+}
+
+// Profil-Auswahl-Screen (beim App-Start, wenn mehrere Profile)
+function showProfileScreen(profiles, currentId) {
+const existing = document.getElementById(‘profile-startup-screen’);
+if (existing) existing.remove();
+
+const screen = document.createElement(‘div’);
+screen.id = ‘profile-startup-screen’;
+screen.className = ‘profile-screen’;
+screen.innerHTML = `<h1>TRAINFLOW</h1> <p>Wähle dein Profil um fortzufahren</p> <div class="profile-list"> ${profiles.map(p =>`
+<div class="profile-item" onclick="selectStartupProfile('${p.id}')">
+<div class="profile-avatar" style="${p.id === currentId ? 'background:linear-gradient(135deg,var(--teal),var(--blue))' : 'background:var(--s3);color:var(--text2)'}">
+${p.name.charAt(0).toUpperCase()}
+</div>
+<div class="profile-info">
+<div class="profile-name">${p.name}</div>
+<div class="profile-meta">Erstellt: ${new Date(p.createdAt).toLocaleDateString(‘de-DE’)}</div>
+</div>
+${p.id === currentId ? ‘<div class="profile-check">●</div>’ : ‘’}
+</div>
+`).join('')} </div> <button class="profile-add-btn" onclick="showCreateProfileStartup()"> <svg style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Neues Profil erstellen </button> `;
+document.getElementById(‘app’).appendChild(screen);
+}
+
+async function selectStartupProfile(id) {
+Profiles.setCurrent(id);
+const screen = document.getElementById(‘profile-startup-screen’);
+if (screen) { screen.style.opacity = ‘0’; screen.style.transition = ‘opacity .3s’; setTimeout(() => screen.remove(), 300); }
+await finishInit();
+}
+
+function showCreateProfileStartup() {
+const screen = document.getElementById(‘profile-startup-screen’);
+screen.innerHTML = `<h1>TRAINFLOW</h1> <p>Wie soll dein Profil heißen?</p> <div style="width:100%;max-width:360px"> <input type="text" id="startup-profile-name" placeholder="Dein Name..." style="width:100%;background:var(--s2);border:1px solid var(--s3);border-radius:var(--r);color:var(--text);font-family:'DM Sans',sans-serif;font-size:1.1rem;padding:16px;outline:none;text-align:center;margin-bottom:12px"> <button class="btn btn-primary btn-full" onclick="createAndSelectProfile()" style="height:54px;font-size:1rem"> Profil erstellen & starten </button> <button class="btn btn-ghost btn-full" onclick="init()" style="margin-top:8px">Abbrechen</button> </div>`;
+document.getElementById(‘startup-profile-name’)?.focus();
+}
+
+async function createAndSelectProfile() {
+const name = document.getElementById(‘startup-profile-name’)?.value.trim();
+if (!name) { alert(‘Bitte einen Namen eingeben.’); return; }
+const id = Profiles.create(name);
+await selectStartupProfile(id);
+}
+
+// ===== APP STARTEN =====
+init();
+</script>
+
+</body>
+</html>
